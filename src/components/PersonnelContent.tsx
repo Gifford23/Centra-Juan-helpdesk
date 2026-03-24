@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  Shield,
+  ShieldCheck,
   Wrench,
   UserPlus,
   MoreVertical,
@@ -114,7 +114,7 @@ export default function PersonnelContent() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1.5">
                       {person.role === "Super Admin" ? (
-                        <Shield className="w-4 h-4 text-indigo-600" />
+                        <ShieldCheck className="w-4 h-4 text-indigo-600" />
                       ) : (
                         <Wrench className="w-4 h-4 text-blue-600" />
                       )}

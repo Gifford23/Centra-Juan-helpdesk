@@ -58,7 +58,7 @@ export default function DashboardContent() {
           onClick={() => setIsModalOpen(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm"
         >
-          + New Walk-In
+          + Create Job Order
         </button>
       </div>
 

@@ -7,7 +7,7 @@ import {
   Settings,
   Search,
   Bell,
-  Shield,
+  ShieldCheck,
 } from "lucide-react";
 import technician from "../assets/technician.png";
 
@@ -81,7 +81,7 @@ export default function AdminLayout({
             to="/personnel"
             className="flex items-center px-3 py-3 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors whitespace-nowrap"
           >
-            <Shield className="w-6 h-6 flex-shrink-0" />
+            <ShieldCheck className="w-6 h-6 flex-shrink-0" />
             <span className="ml-4 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Personnel
             </span>
