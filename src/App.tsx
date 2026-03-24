@@ -1,17 +1,59 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AdminLayout from "./components/AdminLayout";
+import DashboardContent from "./components/DashboardContent";
+import LiveQueueContent from "./components/LiveQueueContent";
+import CustomersContent from "./components/CustomersContent";
+import PersonnelContent from "./components/PersonnelContent";
+import AdminLogin from "./components/AdminLogin"; // <-- Don't forget to import this!
 
 export default function App() {
   return (
-    <AdminLayout>
-      <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm h-96 flex flex-col items-center justify-center">
-        <h2 className="text-2xl font-bold text-gray-800">
-          Dashboard Content Goes Here
-        </h2>
-        <p className="text-gray-500 mt-2">
-          Notice how the sidebar beautifully glides over this content when
-          hovered!
-        </p>
-      </div>
-    </AdminLayout>
+    <BrowserRouter>
+      <Routes>
+        {/* ==========================================
+            PUBLIC ROUTE (No Sidebar/Layout)
+        ========================================== */}
+        <Route path="/login" element={<AdminLogin />} />
+
+        {/* ==========================================
+            SECURE ADMIN ROUTES (Wrapped in the Sidebar Layout)
+        ========================================== */}
+        <Route
+          path="/"
+          element={
+            <AdminLayout>
+              <DashboardContent />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/queue"
+          element={
+            <AdminLayout>
+              <LiveQueueContent />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/customers"
+          element={
+            <AdminLayout>
+              <CustomersContent />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/personnel"
+          element={
+            <AdminLayout>
+              <PersonnelContent />
+            </AdminLayout>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }

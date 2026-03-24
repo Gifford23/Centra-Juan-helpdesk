@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import {
   LayoutDashboard,
@@ -6,9 +7,9 @@ import {
   Settings,
   Search,
   Bell,
-  User,
-  Wrench,
+  Shield,
 } from "lucide-react";
+import technician from "../assets/technician.png";
 
 // This acts as a wrapper. The 'children' will be the actual page content.
 export default function AdminLayout({
@@ -17,6 +18,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showNotifications, setShowNotifications] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -30,7 +32,11 @@ export default function AdminLayout({
       >
         {/* Logo Section */}
         <div className="h-16 flex items-center px-6 border-b border-gray-100 whitespace-nowrap">
-          <Wrench className="w-8 h-8 text-blue-600 flex-shrink-0" />
+          <img
+            src={technician}
+            alt="Technician"
+            className="w-8 h-8 flex-shrink-0 object-cover"
+          />
           <span className="ml-4 font-bold text-xl text-gray-900 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             Central Juan
           </span>
@@ -38,37 +44,51 @@ export default function AdminLayout({
 
         {/* Navigation Links */}
         <nav className="flex-1 py-6 flex flex-col gap-2 px-3">
-          <a
-            href="#"
+          {/* Dashboard Link Fixed */}
+          <Link
+            to="/"
             className="flex items-center px-3 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors whitespace-nowrap"
           >
             <LayoutDashboard className="w-6 h-6 flex-shrink-0" />
             <span className="ml-4 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Dashboard
             </span>
-          </a>
+          </Link>
 
-          <a
-            href="#"
+          {/* Live Queue Link Fixed */}
+          <Link
+            to="/queue"
             className="flex items-center px-3 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors whitespace-nowrap"
           >
             <ListTodo className="w-6 h-6 flex-shrink-0" />
             <span className="ml-4 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Live Queue
             </span>
-          </a>
+          </Link>
 
-          <a
-            href="#"
+          <Link
+            to="/customers"
             className="flex items-center px-3 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors whitespace-nowrap"
           >
             <Users className="w-6 h-6 flex-shrink-0" />
             <span className="ml-4 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Customers
             </span>
-          </a>
+          </Link>
+
+          {/* NEW: Personnel Link */}
+          <Link
+            to="/personnel"
+            className="flex items-center px-3 py-3 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors whitespace-nowrap"
+          >
+            <Shield className="w-6 h-6 flex-shrink-0" />
+            <span className="ml-4 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              Personnel
+            </span>
+          </Link>
 
           <div className="mt-auto">
+            {/* Keeping Settings as an 'a' tag for now since we don't have a route for it yet */}
             <a
               href="#"
               className="flex items-center px-3 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors whitespace-nowrap"
@@ -106,12 +126,56 @@ export default function AdminLayout({
 
           {/* Right Actions (Notifications & Profile) */}
           <div className="flex items-center gap-6 ml-4">
-            {/* Notification Bell */}
-            <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100">
-              <Bell className="w-6 h-6" />
-              {/* Red Dot Indicator */}
-              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
-            </button>
+            {/* Notification Bell (with dropdown) */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications((v) => !v)}
+                aria-expanded={showNotifications}
+                aria-controls="notification-panel"
+                className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
+              >
+                <Bell className="w-6 h-6" />
+                {/* Red Dot Indicator */}
+                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
+              </button>
+
+              {showNotifications && (
+                <div
+                  id="notification-panel"
+                  className="absolute right-0 mt-2 w-80 bg-white border border-gray-100 shadow-lg rounded-lg p-3 z-50"
+                >
+                  <p className="text-sm font-semibold text-gray-700 mb-2">
+                    Notifications
+                  </p>
+                  <ul className="space-y-2 max-h-56 overflow-auto">
+                    <li className="flex items-start gap-3">
+                      <span className="flex-shrink-0 inline-block w-2.5 h-2.5 bg-blue-500 rounded-full mt-1"></span>
+                      <div className="text-sm">
+                        <p className="text-gray-800">New job order received</p>
+                        <p className="text-xs text-gray-500">2 hours ago</p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="flex-shrink-0 inline-block w-2.5 h-2.5 bg-green-500 rounded-full mt-1"></span>
+                      <div className="text-sm">
+                        <p className="text-gray-800">
+                          Customer replied to message
+                        </p>
+                        <p className="text-xs text-gray-500">5 hours ago</p>
+                      </div>
+                    </li>
+                  </ul>
+                  <div className="mt-3 text-center">
+                    <a
+                      href="#"
+                      className="text-sm text-blue-600 hover:underline"
+                    >
+                      View all
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* User Profile */}
             <div className="flex items-center gap-3 pl-6 border-l border-gray-200 cursor-pointer">
