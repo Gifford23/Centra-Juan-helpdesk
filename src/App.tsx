@@ -5,6 +5,7 @@ import LiveQueueContent from "./components/LiveQueueContent";
 import CustomersContent from "./components/CustomersContent";
 import PersonnelContent from "./components/PersonnelContent";
 import AdminLogin from "./components/AdminLogin"; // <-- Don't forget to import this!
+import TrackRepair from "./components/TrackRepair"; // 1. Import the Tracker!
 
 export default function App() {
   return (
@@ -14,7 +15,7 @@ export default function App() {
             PUBLIC ROUTE (No Sidebar/Layout)
         ========================================== */}
         <Route path="/login" element={<AdminLogin />} />
-
+        <Route path="/track" element={<TrackRepair />} />{" "}
         {/* ==========================================
             SECURE ADMIN ROUTES (Wrapped in the Sidebar Layout)
         ========================================== */}
@@ -26,7 +27,6 @@ export default function App() {
             </AdminLayout>
           }
         />
-
         <Route
           path="/queue"
           element={
@@ -35,7 +35,6 @@ export default function App() {
             </AdminLayout>
           }
         />
-
         <Route
           path="/customers"
           element={
@@ -44,7 +43,6 @@ export default function App() {
             </AdminLayout>
           }
         />
-
         <Route
           path="/personnel"
           element={

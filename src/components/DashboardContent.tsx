@@ -1,12 +1,8 @@
 import { useState } from "react";
 import CreateJobModal from "./CreateJobModal";
-import {
-  Clock,
-  Wrench,
-  CheckCircle2,
-  AlertTriangle,
-  MoreVertical,
-} from "lucide-react";
+import { CheckCircle2, AlertTriangle, MoreVertical } from "lucide-react";
+import tools from "../assets/icons/tools.png";
+import pending from "../assets/icons/pending.gif";
 
 export default function DashboardContent() {
   // 1. Add the state to control when the modal is open or closed
@@ -72,8 +68,12 @@ export default function DashboardContent() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Card 1: Pending Drop-offs */}
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center flex-shrink-0">
-            <Clock className="w-6 h-6" />
+          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center flex-shrink-0">
+            <img
+              src={pending}
+              alt="Pending"
+              className="w-10 h-10 object-contain"
+            />
           </div>
           <div>
             <p className="text-sm font-medium text-gray-500">
@@ -86,7 +86,7 @@ export default function DashboardContent() {
         {/* Card 2: Active Workbench */}
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-            <Wrench className="w-6 h-6" />
+            <img src={tools} alt="Tools" className="w-6 h-6 object-contain" />
           </div>
           <div>
             <p className="text-sm font-medium text-gray-500">
