@@ -6,6 +6,7 @@ import CustomersContent from "./components/CustomersContent";
 import PersonnelContent from "./components/PersonnelContent";
 import AdminLogin from "./components/AdminLogin"; // <-- Don't forget to import this!
 import TrackRepair from "./components/TrackRepair"; // 1. Import the Tracker!
+import JobOrdersContent from "./components/JobOrdersContent";
 
 export default function App() {
   return (
@@ -32,6 +33,14 @@ export default function App() {
           element={
             <AdminLayout>
               <LiveQueueContent />
+            </AdminLayout>
+          }
+        />
+        <Route
+          path="/job-orders"
+          element={
+            <AdminLayout>
+              <JobOrdersContent />
             </AdminLayout>
           }
         />

@@ -5,6 +5,7 @@ import {
   Wrench,
   UserPlus,
   MoreVertical,
+  ChevronDown,
   X,
   Mail,
   Lock,
@@ -26,22 +27,22 @@ export default function PersonnelContent() {
     },
     {
       id: "U-002",
-      name: "Mark Technician",
+      name: "Mark Busbus",
       email: "mark@centraljuan.com",
       role: "Technician",
       status: "Active",
     },
     {
       id: "U-003",
-      name: "Sarah Fixer",
-      email: "sarah@centraljuan.com",
+      name: "John Lloyd",
+      email: "johnlloyd@centraljuan.com",
       role: "Technician",
       status: "Active",
     },
     {
       id: "U-004",
-      name: "Mike Intern",
-      email: "mike@centraljuan.com",
+      name: "Jasper Rivera",
+      email: "jasper@centraljuan.com",
       role: "Technician",
       status: "Inactive",
     },
@@ -221,7 +222,7 @@ export default function PersonnelContent() {
                     type="text"
                     required
                     className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none transition-all text-sm font-medium placeholder:text-gray-400 shadow-sm"
-                    placeholder="e.g. John Doe"
+                    placeholder="e.g. John Lloyd"
                   />
                 </div>
               </div>
@@ -263,13 +264,16 @@ export default function PersonnelContent() {
                   <label className="block text-sm font-bold text-gray-700 mb-1.5">
                     System Role
                   </label>
-                  <select
-                    required
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none transition-all text-sm font-medium shadow-sm appearance-none cursor-pointer"
-                  >
-                    <option value="Technician">Technician</option>
-                    <option value="Super Admin">Super Admin</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      required
+                      className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none transition-all text-sm font-medium shadow-sm appearance-none cursor-pointer"
+                    >
+                      <option value="Technician">Technician</option>
+                      <option value="Super Admin">Super Admin</option>
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
                 </div>
               </div>
 

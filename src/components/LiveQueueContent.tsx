@@ -6,6 +6,7 @@ import {
   Printer,
   Download,
   ChevronDown,
+  Funnel,
 } from "lucide-react";
 
 export default function LiveQueueContent() {
@@ -131,11 +132,13 @@ export default function LiveQueueContent() {
             </div>
           </div>
           <div className="relative flex-1 md:w-48">
-            <select className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none text-sm appearance-none bg-white">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Funnel className="h-4 w-4 text-gray-400" />
+            </div>
+            <select className="block w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none text-sm appearance-none bg-white">
               <option value="">All Technicians</option>
               <option value="Unassigned">Unassigned</option>
-              <option value="Mark">Mark</option>
-              <option value="Sarah">Sarah</option>
+              <option value="Assigned">Assigned</option>
             </select>
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
               <ChevronDown className="h-4 w-4 text-gray-400" />

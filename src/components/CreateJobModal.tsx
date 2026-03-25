@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, AlertCircle } from "lucide-react";
 
 interface CreateJobModalProps {
   isOpen: boolean;
@@ -26,43 +26,42 @@ export default function CreateJobModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
-      {/* Dark Overlay (Clicking it also closes the modal) */}
+      {/* Dark Overlay */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"
         onClick={() => {
           if (!isSubmitting) onClose();
         }}
       ></div>
 
       {/* Centered Modal */}
-      <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col max-h-[90vh] overflow-hidden">
+      <div className="relative w-full max-w-3xl bg-white rounded-[24px] shadow-2xl border border-gray-100 flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-300">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 bg-white">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              New Walk-In Repair
+            <h2 className="text-xl font-black text-gray-900 tracking-tight uppercase">
+              Official Job Order
             </h2>
-            <p className="text-sm text-gray-500">
-              Create a new Job Order ticket
+            <p className="text-sm text-gray-500 font-medium mt-0.5">
+              Central Juan I.T. Solutions
             </p>
           </div>
           <button
             onClick={onClose}
             disabled={isSubmitting}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors"
+            className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {isSubmitting && (
-          <div className="absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center">
-            <div className="flex flex-col items-center gap-3 rounded-xl border border-gray-200 bg-white px-8 py-6 shadow-lg">
+          <div className="absolute inset-0 z-20 bg-white/80 backdrop-blur-[2px] flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-gray-100 bg-white px-10 py-8 shadow-xl">
               <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-              <p className="text-sm font-semibold text-gray-800">
-                Creating job order...
+              <p className="text-sm font-bold text-gray-900">
+                Generating Job Order...
               </p>
-              <p className="text-xs text-gray-500">Please wait 2 seconds</p>
             </div>
           </div>
         )}
@@ -70,131 +69,153 @@ export default function CreateJobModal({
         {/* Modal Body (Scrollable Form) */}
         <form
           id="create-job-form"
-          className="flex-1 overflow-y-auto p-6 space-y-6"
+          className="flex-1 overflow-y-auto p-8 space-y-8 bg-gray-50/30"
           onSubmit={handleSubmit}
         >
-          {/* Customer Section */}
+          {/* ==========================================
+              SECTION 1: CUSTOMER DETAILS
+          ========================================== */}
           <div>
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <span className="bg-blue-600 w-2 h-2 rounded-full"></span>
-              Customer Info
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
+              Customer Details
             </h3>
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="md:col-span-2">
+                <input
+                  type="text"
+                  placeholder="Customer Name *"
+                  required
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-sm font-medium placeholder:text-gray-400 shadow-sm"
+                />
+              </div>
+              <input
+                type="tel"
+                placeholder="Tel. / Mobile No. *"
+                required
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-sm font-medium placeholder:text-gray-400 shadow-sm"
+              />
+              <input
+                type="email"
+                placeholder="Email Address"
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-sm font-medium placeholder:text-gray-400 shadow-sm"
+              />
+              <div className="md:col-span-2">
+                <input
+                  type="text"
+                  placeholder="Complete Address *"
+                  required
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-sm font-medium placeholder:text-gray-400 shadow-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ==========================================
+              SECTION 2: EQUIPMENT DETAILS
+          ========================================== */}
+          <div className="pt-6 border-t border-gray-200">
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
+              Equipment Details
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <input
                 type="text"
-                placeholder="Full Name *"
+                placeholder="Brand *"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none text-sm"
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium placeholder:text-gray-400 shadow-sm"
               />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  type="tel"
-                  placeholder="Phone Number *"
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none text-sm"
-                />
-                <input
-                  type="email"
-                  placeholder="Email (Optional)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none text-sm"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Device Section */}
-          <div className="pt-4 border-t border-gray-100">
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <span className="bg-blue-600 w-2 h-2 rounded-full"></span>
-              Device Details
-            </h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <select
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none text-sm bg-white"
-                >
-                  <option value="">Type *</option>
-                  <option value="Laptop">Laptop</option>
-                  <option value="Desktop">Desktop</option>
-                  <option value="Printer">Printer</option>
-                </select>
-                <input
-                  type="text"
-                  placeholder="Brand *"
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none text-sm"
-                />
-                <input
-                  type="text"
-                  placeholder="Exact Model *"
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none text-sm"
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <input
-                  type="text"
-                  placeholder="Serial Number"
-                  className="md:col-span-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none text-sm"
-                />
-                <input
-                  type="text"
-                  placeholder="Device PIN/Password"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none text-sm"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Issue Section */}
-          <div className="pt-4 border-t border-gray-100">
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <span className="bg-blue-600 w-2 h-2 rounded-full"></span>
-              Complaint & Notes
-            </h3>
-            <div className="space-y-4">
-              <select
+              <input
+                type="text"
+                placeholder="Model *"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none text-sm bg-white"
-              >
-                <option value="">Primary Issue *</option>
-                <option value="No Power">No Power / Won't Turn On</option>
-                <option value="Broken Screen">Broken Screen</option>
-                <option value="Running Slow">Running Slow / Virus</option>
-                <option value="Hardware Upgrade">Hardware Upgrade</option>
-              </select>
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium placeholder:text-gray-400 shadow-sm"
+              />
+              <input
+                type="text"
+                placeholder="Serial No. *"
+                required
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium placeholder:text-gray-400 shadow-sm"
+              />
+              <div className="md:col-span-3">
+                <textarea
+                  rows={2}
+                  placeholder="Visual Checks (Please indicate notable marks/defects, etc.) *"
+                  required
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium placeholder:text-gray-400 shadow-sm resize-none"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          {/* ==========================================
+              SECTION 3: NATURE OF COMPLAINT
+          ========================================== */}
+          <div className="pt-6 border-t border-gray-200">
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
+              Nature of Complaint
+            </h3>
+            <div className="space-y-5">
               <textarea
                 rows={3}
-                placeholder="Admin Notes (e.g., Missing screws, deep scratch on cover)..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none text-sm resize-none"
+                placeholder="Describe the issue reported by the customer..."
+                required
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium placeholder:text-gray-400 shadow-sm resize-none"
               ></textarea>
             </div>
           </div>
 
-          {/* Terms Agreement */}
-          <div className="pt-4 border-t bg-amber-50 p-3 rounded-lg border border-amber-100">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                required
-                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-sm text-amber-900 font-medium">
-                Customer verbally agrees to the 350.00 PHP minimum diagnostic
-                fee and data loss waiver.
-              </span>
-            </label>
+          {/* ==========================================
+              SECTION 4: TERMS AND CONDITIONS
+          ========================================== */}
+          <div className="pt-6 border-t border-gray-200">
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-5">
+              <h4 className="text-sm font-black text-blue-900 mb-3 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" /> Terms and Conditions
+                Agreement
+              </h4>
+              <ul className="text-xs text-blue-800 space-y-2 list-disc pl-4 font-medium">
+                <li>
+                  A minimum fee of 350.00 Pesos for the inspection and
+                  diagnostic checks.
+                </li>
+                <li>
+                  Customer is responsible for data backup before repair. Central
+                  Juan is not responsible for data loss for any reason.
+                </li>
+                <li>All parts replaced are subject to 3 months warranty.</li>
+                <li>
+                  There will be a 30 days warranty of labor in relation to the
+                  original complaint.
+                </li>
+                <li>
+                  Unable to claim the item within 90 days after advised to claim
+                  regardless of the state of the repair, Central Juan has the
+                  right to dispose the unit.
+                </li>
+              </ul>
+
+              <label className="flex items-start gap-3 cursor-pointer mt-5 pt-4 border-t border-blue-200/50">
+                <input
+                  type="checkbox"
+                  required
+                  className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                />
+                <span className="text-sm text-blue-900 font-bold leading-tight">
+                  I confirm that the customer has read and verbally agreed to
+                  the Terms and Conditions listed above.
+                </span>
+              </label>
+            </div>
           </div>
         </form>
 
         {/* Modal Footer (Action Buttons) */}
-        <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+        <div className="px-8 py-5 border-t border-gray-100 bg-white flex justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-6 py-3 text-sm font-bold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors active:scale-95"
           >
             Cancel
           </button>
@@ -202,16 +223,9 @@ export default function CreateJobModal({
             type="submit"
             form="create-job-form"
             disabled={isSubmitting}
-            className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-6 py-3 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2 active:scale-95"
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              "Submit"
-            )}
+            {isSubmitting ? "Processing..." : "Submit"}
           </button>
         </div>
       </div>

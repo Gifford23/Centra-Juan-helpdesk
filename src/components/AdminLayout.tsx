@@ -11,6 +11,7 @@ import {
   LogOut,
   ChevronDown,
   Tickets,
+  ClipboardList, // <-- Added the ClipboardList icon here
 } from "lucide-react";
 import technician from "../assets/technician.png";
 
@@ -43,7 +44,7 @@ export default function AdminLayout({
             className="w-8 h-8 flex-shrink-0 object-cover drop-shadow-sm"
           />
           <span className="ml-4 font-black text-xl text-gray-900 tracking-tight opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            Central Juan
+            Help Desk
           </span>
         </div>
 
@@ -56,6 +57,17 @@ export default function AdminLayout({
             <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Dashboard
+            </span>
+          </Link>
+
+          {/* NEW: Job Orders Kanban Link */}
+          <Link
+            to="/job-orders"
+            className="flex items-center px-3 py-2.5 text-gray-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-all whitespace-nowrap font-medium"
+          >
+            <ClipboardList className="w-5 h-5 flex-shrink-0" />
+            <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              Job Orders
             </span>
           </Link>
 
