@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   ShieldCheck,
+  Shield, // <-- Added this missing import!
   Wrench,
   UserPlus,
   MoreVertical,
@@ -8,6 +9,7 @@ import {
   Mail,
   Lock,
   User,
+  UserRoundCheck,
 } from "lucide-react";
 
 export default function PersonnelContent() {
@@ -46,59 +48,73 @@ export default function PersonnelContent() {
   ]);
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* ==========================================
+          PAGE HEADER (Upgraded)
+      ========================================== */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Staff Management</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
+            Staff Management
+          </h1>
+          <p className="text-gray-500 text-sm mt-1 font-medium">
             Manage employee accounts and system roles
           </p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm text-sm"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all active:scale-95 shadow-md shadow-indigo-600/20"
         >
-          <UserPlus className="w-4 h-4" /> Add Personnel
+          <UserPlus className="w-5 h-5" /> Add Personnel
         </button>
       </div>
 
       {/* ==========================================
-          STAFF DATA TABLE
+          STAFF DATA TABLE (Upgraded)
       ========================================== */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
-              <tr className="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
-                <th className="px-6 py-4 font-semibold">Employee Name</th>
-                <th className="px-6 py-4 font-semibold">Email Account</th>
-                <th className="px-6 py-4 font-semibold">System Role</th>
-                <th className="px-6 py-4 font-semibold">Status</th>
-                <th className="px-6 py-4 font-semibold text-right">Actions</th>
+              <tr>
+                <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  Employee Name
+                </th>
+                <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  Email Account
+                </th>
+                <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  System Role
+                </th>
+                <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  Status
+                </th>
+                <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100 text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {staff.map((person) => (
                 <tr
                   key={person.id}
-                  className="hover:bg-gray-50 transition-colors"
+                  className="hover:bg-indigo-50/30 transition-colors group cursor-pointer"
                 >
-                  {/* Name */}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
+                  {/* Name & Avatar */}
+                  <td className="px-7 py-5">
+                    <div className="flex items-center gap-4">
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                        className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ring-2 ring-white shadow-sm ${
                           person.role === "Super Admin"
-                            ? "bg-indigo-100 text-indigo-700"
-                            : "bg-blue-100 text-blue-700"
+                            ? "bg-gradient-to-tr from-indigo-600 to-indigo-400 text-white"
+                            : "bg-gradient-to-tr from-blue-500 to-blue-400 text-white"
                         }`}
                       >
                         {person.name.charAt(0)}
                       </div>
                       <div>
                         <p className="font-bold text-gray-900">{person.name}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
+                        <p className="text-xs text-gray-500 mt-0.5 font-medium">
                           ID: {person.id}
                         </p>
                       </div>
@@ -106,20 +122,20 @@ export default function PersonnelContent() {
                   </td>
 
                   {/* Email */}
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className="px-7 py-5 text-sm text-gray-600 font-medium">
                     {person.email}
                   </td>
 
                   {/* Role */}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1.5">
+                  <td className="px-7 py-5">
+                    <div className="flex items-center gap-2">
                       {person.role === "Super Admin" ? (
                         <ShieldCheck className="w-4 h-4 text-indigo-600" />
                       ) : (
-                        <Wrench className="w-4 h-4 text-blue-600" />
+                        <UserRoundCheck className="w-4 h-4 text-blue-600" />
                       )}
                       <span
-                        className={`text-sm font-medium ${
+                        className={`text-sm font-bold ${
                           person.role === "Super Admin"
                             ? "text-indigo-700"
                             : "text-blue-700"
@@ -130,13 +146,13 @@ export default function PersonnelContent() {
                     </div>
                   </td>
 
-                  {/* Status */}
-                  <td className="px-6 py-4">
+                  {/* Status Badge */}
+                  <td className="px-7 py-5">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold border ${
                         person.status === "Active"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-500"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                          : "bg-gray-50 text-gray-500 border-gray-200/60"
                       }`}
                     >
                       {person.status}
@@ -144,9 +160,9 @@ export default function PersonnelContent() {
                   </td>
 
                   {/* Actions */}
-                  <td className="px-6 py-4 text-right">
-                    <button className="text-gray-400 hover:text-gray-700 transition-colors">
-                      <MoreVertical className="w-5 h-5 ml-auto" />
+                  <td className="px-7 py-5 text-right">
+                    <button className="text-gray-400 hover:text-gray-900 bg-transparent hover:bg-gray-100 p-2 rounded-lg transition-all ml-auto block opacity-0 group-hover:opacity-100">
+                      <MoreVertical className="w-5 h-5" />
                     </button>
                   </td>
                 </tr>
@@ -157,109 +173,128 @@ export default function PersonnelContent() {
       </div>
 
       {/* ==========================================
-          ADD PERSONNEL MODAL
+          ADD PERSONNEL MODAL (Premium UI)
       ========================================== */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+          {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity duration-300"
             onClick={() => setIsModalOpen(false)}
           ></div>
 
-          <div className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl animate-slide-in-right md:animate-none">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">
-                  Create New Account
-                </h2>
-                <p className="text-sm text-gray-500">
-                  Generate credentials for a new employee
-                </p>
+          {/* Modal Content */}
+          <div className="relative bg-white w-full max-w-lg rounded-[24px] shadow-2xl shadow-indigo-900/10 animate-in fade-in zoom-in-95 duration-300 flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-8 py-6 border-b border-gray-100 bg-white">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <UserPlus className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 tracking-tight">
+                    Create New Account
+                  </h2>
+                  <p className="text-sm text-gray-500 font-medium mt-0.5">
+                    Generate access credentials for a new employee.
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-2 text-gray-400 hover:bg-gray-100 rounded-full"
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors self-start"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form className="p-6 space-y-4">
+            {/* Modal Body & Form */}
+            <form className="p-8 space-y-5 bg-gray-50/30">
+              {/* Full Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-bold text-gray-700 mb-1.5">
                   Full Name
                 </label>
                 <div className="relative">
-                  <User className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+                  <User className="w-5 h-5 text-gray-400 absolute left-3.5 top-3.5" />
                   <input
                     type="text"
                     required
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none"
+                    className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none transition-all text-sm font-medium placeholder:text-gray-400 shadow-sm"
                     placeholder="e.g. John Doe"
                   />
                 </div>
               </div>
 
+              {/* Email Address */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-bold text-gray-700 mb-1.5">
                   Email Address (Username)
                 </label>
                 <div className="relative">
-                  <Mail className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+                  <Mail className="w-5 h-5 text-gray-400 absolute left-3.5 top-3.5" />
                   <input
                     type="email"
                     required
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none"
+                    className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none transition-all text-sm font-medium placeholder:text-gray-400 shadow-sm"
                     placeholder="john@centraljuan.com"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Temporary Password
-                </label>
-                <div className="relative">
-                  <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
-                  <input
-                    type="password"
+              {/* Password & Role Row */}
+              <div className="flex flex-col sm:flex-row gap-5">
+                <div className="flex-1">
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                    Temporary Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-5 h-5 text-gray-400 absolute left-3.5 top-3.5" />
+                    <input
+                      type="password"
+                      required
+                      className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none transition-all text-sm font-medium placeholder:text-gray-400 shadow-sm"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex-1">
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                    System Role
+                  </label>
+                  <select
                     required
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none"
-                    placeholder="••••••••"
-                  />
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none transition-all text-sm font-medium shadow-sm appearance-none cursor-pointer"
+                  >
+                    <option value="Technician">Technician</option>
+                    <option value="Super Admin">Super Admin</option>
+                  </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  System Role
-                </label>
-                <select
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none bg-white"
-                >
-                  <option value="Technician">
-                    Technician (Restricted Access)
-                  </option>
-                  <option value="Super Admin">Super Admin (Full Access)</option>
-                </select>
-                <p className="text-xs text-gray-500 mt-2">
-                  * Technicians can only view and update their assigned job
-                  orders.
+              {/* Contextual Helper Text */}
+              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex items-start gap-3 mt-2">
+                <ShieldCheck className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-indigo-900 font-medium leading-relaxed">
+                  <strong>Technicians</strong> can only view and update their
+                  assigned job orders. <strong>Super Admins</strong> have full
+                  access to billing, personnel, and system settings.
                 </p>
               </div>
 
-              <div className="pt-4 flex gap-3">
+              {/* Action Buttons */}
+              <div className="pt-6 mt-6 border-t border-gray-100 flex gap-3">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                  className="flex-1 px-4 py-3.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-100 font-bold transition-colors active:scale-[0.98] text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium shadow-sm"
+                  className="flex-1 px-4 py-3.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-bold shadow-sm shadow-indigo-600/20 transition-all active:scale-[0.98] text-sm"
                 >
                   Create Account
                 </button>

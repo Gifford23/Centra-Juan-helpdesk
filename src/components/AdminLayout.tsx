@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
   LayoutDashboard,
@@ -8,6 +8,9 @@ import {
   Search,
   Bell,
   ShieldCheck,
+  LogOut,
+  ChevronDown,
+  Tickets,
 } from "lucide-react";
 import technician from "../assets/technician.png";
 
@@ -19,104 +22,100 @@ export default function AdminLayout({
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-[#F8FAFC] flex font-sans">
       {/* ==========================================
           LEFT SIDEBAR (Collapse/Expand on Hover)
       ========================================== */}
       <aside
         className="fixed top-0 left-0 h-screen bg-white border-r border-gray-200 z-50 
                       w-20 hover:w-64 transition-all duration-300 ease-in-out group 
-                      overflow-hidden flex flex-col shadow-sm"
+                      overflow-hidden flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]"
       >
         {/* Logo Section */}
         <div className="h-16 flex items-center px-6 border-b border-gray-100 whitespace-nowrap">
           <img
             src={technician}
             alt="Technician"
-            className="w-8 h-8 flex-shrink-0 object-cover"
+            className="w-8 h-8 flex-shrink-0 object-cover drop-shadow-sm"
           />
-          <span className="ml-4 font-bold text-xl text-gray-900 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <span className="ml-4 font-black text-xl text-gray-900 tracking-tight opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             Central Juan
           </span>
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 py-6 flex flex-col gap-2 px-3">
-          {/* Dashboard Link Fixed */}
+        <nav className="flex-1 py-6 flex flex-col gap-1.5 px-3 overflow-y-auto">
           <Link
             to="/"
-            className="flex items-center px-3 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors whitespace-nowrap"
+            className="flex items-center px-3 py-2.5 text-gray-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-all whitespace-nowrap font-medium"
           >
-            <LayoutDashboard className="w-6 h-6 flex-shrink-0" />
-            <span className="ml-4 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
+            <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Dashboard
             </span>
           </Link>
 
-          {/* Live Queue Link Fixed */}
           <Link
             to="/queue"
-            className="flex items-center px-3 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors whitespace-nowrap"
+            className="flex items-center px-3 py-2.5 text-gray-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-all whitespace-nowrap font-medium"
           >
-            <ListTodo className="w-6 h-6 flex-shrink-0" />
-            <span className="ml-4 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              Live Queue
+            <Tickets className="w-5 h-5 flex-shrink-0" />
+            <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              Tickets
             </span>
           </Link>
 
           <Link
             to="/customers"
-            className="flex items-center px-3 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors whitespace-nowrap"
+            className="flex items-center px-3 py-2.5 text-gray-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-all whitespace-nowrap font-medium"
           >
-            <Users className="w-6 h-6 flex-shrink-0" />
-            <span className="ml-4 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <Users className="w-5 h-5 flex-shrink-0" />
+            <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Customers
             </span>
           </Link>
 
-          {/* NEW: Personnel Link */}
           <Link
             to="/personnel"
-            className="flex items-center px-3 py-3 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors whitespace-nowrap"
+            className="flex items-center px-3 py-2.5 text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition-all whitespace-nowrap font-medium"
           >
-            <ShieldCheck className="w-6 h-6 flex-shrink-0" />
-            <span className="ml-4 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <ShieldCheck className="w-5 h-5 flex-shrink-0" />
+            <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Personnel
             </span>
           </Link>
-
-          <div className="mt-auto">
-            {/* Keeping Settings as an 'a' tag for now since we don't have a route for it yet */}
-            <a
-              href="#"
-              className="flex items-center px-3 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors whitespace-nowrap"
-            >
-              <Settings className="w-6 h-6 flex-shrink-0" />
-              <span className="ml-4 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                Settings / Print
-              </span>
-            </a>
-          </div>
         </nav>
+
+        {/* Bottom Actions (Settings & Sign Out) */}
+        <div className="p-3 border-t border-gray-100 flex flex-col gap-1.5 bg-gray-50/50">
+          <button className="w-full flex items-center px-3 py-2.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-all whitespace-nowrap font-medium">
+            <Settings className="w-5 h-5 flex-shrink-0" />
+            <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              Settings
+            </span>
+          </button>
+        </div>
       </aside>
 
       {/* ==========================================
-          MAIN CONTENT AREA (Pushed right to make room for the collapsed sidebar)
+          MAIN CONTENT AREA 
       ========================================== */}
       <div className="flex-1 ml-20 flex flex-col min-h-screen transition-all duration-300">
-        {/* TOP NAVIGATION BAR */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-40">
+        {/* TOP NAVIGATION BAR (Glassmorphism Effect) */}
+        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-40 shadow-sm">
           {/* Global Search */}
           <div className="flex-1 max-w-xl">
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                <Search className="h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
               </div>
               <input
                 type="text"
-                className="block w-full pl-10 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all"
+                className="block w-full pl-10 pr-3 py-2 bg-gray-100/70 border-transparent rounded-lg focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm font-medium placeholder:text-gray-400"
                 placeholder="Search Job Order No. or Phone Number (e.g., 1415)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -125,69 +124,83 @@ export default function AdminLayout({
           </div>
 
           {/* Right Actions (Notifications & Profile) */}
-          <div className="flex items-center gap-6 ml-4">
-            {/* Notification Bell (with dropdown) */}
+          <div className="flex items-center gap-5 ml-4">
+            {/* Notification Bell */}
             <div className="relative">
               <button
                 onClick={() => setShowNotifications((v) => !v)}
-                aria-expanded={showNotifications}
-                aria-controls="notification-panel"
-                className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
+                className="relative p-2 text-gray-400 hover:text-gray-700 transition-colors rounded-full hover:bg-gray-100"
               >
-                <Bell className="w-6 h-6" />
-                {/* Red Dot Indicator */}
-                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 border-2 border-white rounded-full"></span>
               </button>
 
+              {/* Notification Dropdown */}
               {showNotifications && (
-                <div
-                  id="notification-panel"
-                  className="absolute right-0 mt-2 w-80 bg-white border border-gray-100 shadow-lg rounded-lg p-3 z-50"
-                >
-                  <p className="text-sm font-semibold text-gray-700 mb-2">
-                    Notifications
-                  </p>
-                  <ul className="space-y-2 max-h-56 overflow-auto">
-                    <li className="flex items-start gap-3">
-                      <span className="flex-shrink-0 inline-block w-2.5 h-2.5 bg-blue-500 rounded-full mt-1"></span>
-                      <div className="text-sm">
-                        <p className="text-gray-800">New job order received</p>
-                        <p className="text-xs text-gray-500">2 hours ago</p>
+                <div className="absolute right-0 mt-3 w-80 bg-white border border-gray-100 shadow-xl shadow-gray-200/50 rounded-xl p-4 z-50 transform opacity-100 scale-100 transition-all">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-bold text-gray-900">
+                      Notifications
+                    </p>
+                    <span className="text-xs text-blue-600 font-medium cursor-pointer hover:underline">
+                      Mark all as read
+                    </span>
+                  </div>
+                  <ul className="space-y-3 max-h-64 overflow-y-auto pr-1">
+                    <li className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">
+                      <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+                        <ListTodo className="w-4 h-4" />
                       </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="flex-shrink-0 inline-block w-2.5 h-2.5 bg-green-500 rounded-full mt-1"></span>
                       <div className="text-sm">
-                        <p className="text-gray-800">
-                          Customer replied to message
+                        <p className="text-gray-900 font-medium">
+                          New job order #1419
                         </p>
-                        <p className="text-xs text-gray-500">5 hours ago</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          2 hours ago
+                        </p>
                       </div>
                     </li>
                   </ul>
-                  <div className="mt-3 text-center">
-                    <a
-                      href="#"
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      View all
-                    </a>
-                  </div>
                 </div>
               )}
             </div>
 
-            {/* User Profile */}
-            <div className="flex items-center gap-3 pl-6 border-l border-gray-200 cursor-pointer">
-              <div className="w-9 h-9 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">
-                J
+            <div className="h-6 w-px bg-gray-200"></div>
+
+            {/* User Profile Area */}
+            <div className="relative">
+              <div
+                onClick={() => setShowProfile((v) => !v)}
+                className="flex items-center gap-3 cursor-pointer group"
+              >
+                <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-blue-500 text-white rounded-full flex items-center justify-center font-bold shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
+                  J
+                </div>
+                <div className="hidden md:flex flex-col">
+                  <span className="text-sm font-bold text-gray-900 leading-none mb-1">
+                    Admin - Juan
+                  </span>
+                  <span className="text-xs font-medium text-gray-500 leading-none">
+                    Super Admin
+                  </span>
+                </div>
+                <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors ml-1 hidden md:block" />
               </div>
-              <div className="hidden md:block">
-                <p className="text-sm font-semibold text-gray-700">
-                  Admin - Juan
-                </p>
-                <p className="text-xs text-gray-500">Super Admin</p>
-              </div>
+
+              {showProfile && (
+                <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-100 rounded-lg shadow-lg p-2 z-50">
+                  <button
+                    onClick={() => {
+                      setShowProfile(false);
+                      navigate("/login");
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                  >
+                    <LogOut className="w-4 h-4 text-gray-500" />
+                    Sign Out
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>

@@ -1,12 +1,15 @@
 import { useState } from "react";
 import CreateJobModal from "./CreateJobModal";
-import { CheckCircle2, AlertTriangle, MoreVertical } from "lucide-react";
+import { MoreVertical } from "lucide-react";
 import tools from "../assets/icons/tools.png";
 import pending from "../assets/icons/pending.gif";
+import check from "../assets/icons/check.png";
+import warning from "../assets/icons/warning.png";
 
 export default function DashboardContent() {
   // 1. Add the state to control when the modal is open or closed
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   // Dummy data for the Active Workload table
   const activeWorkload = [
@@ -53,12 +56,26 @@ export default function DashboardContent() {
           </p>
         </div>
 
-        {/* 2. Update the button to open the modal when clicked */}
+        {/* 2. Update the button to open the modal when clicked (with loader) */}
         <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm"
+          onClick={() => {
+            setIsCreating(true);
+            setTimeout(() => {
+              setIsModalOpen(true);
+              setIsCreating(false);
+            }, 600);
+          }}
+          disabled={isCreating}
+          className={`bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center ${isCreating ? "opacity-80 cursor-wait" : ""}`}
         >
-          + Create Job Order
+          {isCreating ? (
+            <span className="flex items-center gap-2">
+              <span className="w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin inline-block" />
+              <span>Creating...</span>
+            </span>
+          ) : (
+            "+ Create Job Order"
+          )}
         </button>
       </div>
 
@@ -99,7 +116,7 @@ export default function DashboardContent() {
         {/* Card 3: Ready for Release */}
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-            <CheckCircle2 className="w-6 h-6" />
+            <img src={check} alt="Ready" className="w-7 h-7 object-contain" />
           </div>
           <div>
             <p className="text-sm font-medium text-gray-500">
@@ -112,7 +129,11 @@ export default function DashboardContent() {
         {/* Card 4: 90-Day Warnings */}
         <div className="bg-white p-6 rounded-xl border border-red-100 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center flex-shrink-0">
-            <AlertTriangle className="w-6 h-6" />
+            <img
+              src={warning}
+              alt="Warning"
+              className="w-6 h-6 object-contain"
+            />
           </div>
           <div>
             <p className="text-sm font-medium text-red-600">90-Day Warnings</p>

@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Search, Filter, Eye, Printer, Download } from "lucide-react";
+import {
+  Search,
+  Filter,
+  Eye,
+  Printer,
+  Download,
+  ChevronDown,
+} from "lucide-react";
 
 export default function LiveQueueContent() {
   // We will hook this up to Supabase later, but here is mock data for the UI
@@ -119,6 +126,9 @@ export default function LiveQueueContent() {
               <option value="Diagnosing">Diagnosing</option>
               <option value="Ready">Ready for Pickup</option>
             </select>
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <ChevronDown className="h-4 w-4 text-gray-400" />
+            </div>
           </div>
           <div className="relative flex-1 md:w-48">
             <select className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none text-sm appearance-none bg-white">
@@ -127,6 +137,9 @@ export default function LiveQueueContent() {
               <option value="Mark">Mark</option>
               <option value="Sarah">Sarah</option>
             </select>
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <ChevronDown className="h-4 w-4 text-gray-400" />
+            </div>
           </div>
         </div>
       </div>
@@ -175,7 +188,7 @@ export default function LiveQueueContent() {
                   </td>
                   <td className="px-6 py-4">
                     <span
-                      className={`px-3 py-1.5 rounded-md text-xs font-bold border ${getStatusStyle(job.status)}`}
+                      className={`px-3 py-2 rounded-[13px] text-sm font-bold border ${getStatusStyle(job.status)}`}
                     >
                       {job.status}
                     </span>
