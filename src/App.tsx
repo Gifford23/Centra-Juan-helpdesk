@@ -1,63 +1,95 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./components/AdminLayout";
 import DashboardContent from "./components/DashboardContent";
 import LiveQueueContent from "./components/LiveQueueContent";
 import CustomersContent from "./components/CustomersContent";
 import PersonnelContent from "./components/PersonnelContent";
-import AdminLogin from "./components/AdminLogin"; // <-- Don't forget to import this!
-import TrackRepair from "./components/TrackRepair"; // 1. Import the Tracker!
+import AdminLogin from "./components/AdminLogin";
+import TrackRepair from "./components/TrackRepair";
 import JobOrdersContent from "./components/JobOrdersContent";
+import CustomerDetails from "./components/CustomerDetails";
+
+// --- NEW: Protected Route Wrapper ---
+// This component checks if a user is logged in before rendering the page.
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const savedUser = localStorage.getItem("central_juan_user");
+
+  if (!savedUser) {
+    // If no user is found, teleport them back to the login page
+    return <Navigate to="/login" replace />;
+  }
+
+  // If they are logged in, let them see the page!
+  return <>{children}</>;
+};
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ==========================================
-            PUBLIC ROUTE (No Sidebar/Layout)
-        ========================================== */}
+        {/* PUBLIC ROUTES */}
         <Route path="/login" element={<AdminLogin />} />
-        <Route path="/track" element={<TrackRepair />} />{" "}
-        {/* ==========================================
-            SECURE ADMIN ROUTES (Wrapped in the Sidebar Layout)
-        ========================================== */}
+        <Route path="/track" element={<TrackRepair />} />
+
+        {/* SECURE ADMIN ROUTES */}
         <Route
           path="/"
           element={
-            <AdminLayout>
-              <DashboardContent />
-            </AdminLayout>
+            <ProtectedRoute>
+              <AdminLayout>
+                <DashboardContent />
+              </AdminLayout>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/queue"
           element={
-            <AdminLayout>
-              <LiveQueueContent />
-            </AdminLayout>
+            <ProtectedRoute>
+              <AdminLayout>
+                <LiveQueueContent />
+              </AdminLayout>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/job-orders"
           element={
-            <AdminLayout>
-              <JobOrdersContent />
-            </AdminLayout>
+            <ProtectedRoute>
+              <AdminLayout>
+                <JobOrdersContent />
+              </AdminLayout>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/customers"
           element={
-            <AdminLayout>
-              <CustomersContent />
-            </AdminLayout>
+            <ProtectedRoute>
+              <AdminLayout>
+                <CustomersContent />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customers/:id"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <CustomerDetails />
+              </AdminLayout>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/personnel"
           element={
-            <AdminLayout>
-              <PersonnelContent />
-            </AdminLayout>
+            <ProtectedRoute>
+              <AdminLayout>
+                <PersonnelContent />
+              </AdminLayout>
+            </ProtectedRoute>
           }
         />
       </Routes>

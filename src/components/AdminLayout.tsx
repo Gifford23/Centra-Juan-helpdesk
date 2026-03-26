@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import {
   LayoutDashboard,
@@ -11,7 +11,7 @@ import {
   LogOut,
   ChevronDown,
   Tickets,
-  ClipboardList, // <-- Added the ClipboardList icon here
+  ClipboardList,
 } from "lucide-react";
 import technician from "../assets/technician.png";
 
@@ -24,7 +24,15 @@ export default function AdminLayout({
   const [searchQuery, setSearchQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+
   const navigate = useNavigate();
+  const location = useLocation(); // Used to highlight the active tab
+
+  // 1. GET THE LOGGED IN USER FROM LOCAL STORAGE
+  const savedUser = JSON.parse(
+    localStorage.getItem("central_juan_user") || "{}",
+  );
+  const isSuperAdmin = savedUser?.role === "Super Admin";
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex font-sans">
@@ -52,7 +60,7 @@ export default function AdminLayout({
         <nav className="flex-1 py-6 flex flex-col gap-1.5 px-3 overflow-y-auto">
           <Link
             to="/"
-            className="flex items-center px-3 py-2.5 text-gray-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-all whitespace-nowrap font-medium"
+            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50"}`}
           >
             <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -60,10 +68,9 @@ export default function AdminLayout({
             </span>
           </Link>
 
-          {/* NEW: Job Orders Kanban Link */}
           <Link
             to="/job-orders"
-            className="flex items-center px-3 py-2.5 text-gray-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-all whitespace-nowrap font-medium"
+            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/job-orders" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50"}`}
           >
             <ClipboardList className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -73,7 +80,7 @@ export default function AdminLayout({
 
           <Link
             to="/queue"
-            className="flex items-center px-3 py-2.5 text-gray-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-all whitespace-nowrap font-medium"
+            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/queue" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50"}`}
           >
             <Tickets className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -83,7 +90,7 @@ export default function AdminLayout({
 
           <Link
             to="/customers"
-            className="flex items-center px-3 py-2.5 text-gray-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-all whitespace-nowrap font-medium"
+            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/customers" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50"}`}
           >
             <Users className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -91,15 +98,18 @@ export default function AdminLayout({
             </span>
           </Link>
 
-          <Link
-            to="/personnel"
-            className="flex items-center px-3 py-2.5 text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition-all whitespace-nowrap font-medium"
-          >
-            <ShieldCheck className="w-5 h-5 flex-shrink-0" />
-            <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              Personnel
-            </span>
-          </Link>
+          {/* 2. ONLY SHOW PERSONNEL TAB IF SUPER ADMIN */}
+          {isSuperAdmin && (
+            <Link
+              to="/personnel"
+              className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/personnel" ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-50"}`}
+            >
+              <ShieldCheck className="w-5 h-5 flex-shrink-0" />
+              <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                Personnel
+              </span>
+            </Link>
+          )}
         </nav>
 
         {/* Bottom Actions (Settings & Sign Out) */}
@@ -185,15 +195,22 @@ export default function AdminLayout({
                 onClick={() => setShowProfile((v) => !v)}
                 className="flex items-center gap-3 cursor-pointer group"
               >
-                <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-blue-500 text-white rounded-full flex items-center justify-center font-bold shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
-                  J
+                {/* 3. DYNAMIC PROFILE AVATAR */}
+                <div
+                  className={`w-9 h-9 text-white rounded-full flex items-center justify-center font-bold shadow-md transition-transform group-hover:scale-105 ${isSuperAdmin ? "bg-gradient-to-tr from-indigo-600 to-indigo-500 shadow-indigo-500/20" : "bg-gradient-to-tr from-blue-600 to-blue-500 shadow-blue-500/20"}`}
+                >
+                  {savedUser?.full_name
+                    ? savedUser.full_name.charAt(0).toUpperCase()
+                    : "U"}
                 </div>
+
+                {/* 4. DYNAMIC PROFILE TEXT */}
                 <div className="hidden md:flex flex-col">
                   <span className="text-sm font-bold text-gray-900 leading-none mb-1">
-                    Admin - Juan
+                    {savedUser?.full_name || "Unknown User"}
                   </span>
                   <span className="text-xs font-medium text-gray-500 leading-none">
-                    Super Admin
+                    {savedUser?.role || "Staff"}
                   </span>
                 </div>
                 <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors ml-1 hidden md:block" />
@@ -203,12 +220,14 @@ export default function AdminLayout({
                 <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-100 rounded-lg shadow-lg p-2 z-50">
                   <button
                     onClick={() => {
+                      // 5. CLEAR SAVED SESSION ON LOGOUT
+                      localStorage.removeItem("central_juan_user");
                       setShowProfile(false);
                       navigate("/login");
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                   >
-                    <LogOut className="w-4 h-4 text-gray-500" />
+                    <LogOut className="w-4 h-4 text-red-500" />
                     Sign Out
                   </button>
                 </div>
