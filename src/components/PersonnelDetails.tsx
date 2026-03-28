@@ -139,11 +139,19 @@ export default function PersonnelDetails() {
         {/* Decorative background element */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-indigo-50 to-transparent rounded-full -mr-20 -mt-20 opacity-60 z-0 pointer-events-none"></div>
 
-        <div
-          className={`relative z-10 w-28 h-28 text-white rounded-3xl flex items-center justify-center font-black text-5xl shadow-lg flex-shrink-0 ${personnel.role === "Super Admin" ? "bg-gradient-to-tr from-indigo-600 to-indigo-400 shadow-indigo-500/20" : "bg-gradient-to-tr from-blue-500 to-blue-400 shadow-blue-500/20"}`}
-        >
-          {personnel.full_name.charAt(0).toUpperCase()}
-        </div>
+        {personnel.avatar_url ? (
+          <img
+            src={personnel.avatar_url}
+            alt={personnel.full_name}
+            className="relative z-10 w-28 h-28 rounded-3xl object-cover shadow-lg ring-2 ring-white flex-shrink-0"
+          />
+        ) : (
+          <div
+            className={`relative z-10 w-28 h-28 text-white rounded-3xl flex items-center justify-center font-black text-5xl shadow-lg flex-shrink-0 ${personnel.role === "Super Admin" ? "bg-gradient-to-tr from-indigo-600 to-indigo-400 shadow-indigo-500/20" : "bg-gradient-to-tr from-blue-500 to-blue-400 shadow-blue-500/20"}`}
+          >
+            {personnel.full_name.charAt(0).toUpperCase()}
+          </div>
+        )}
 
         <div className="relative z-10 flex-1 w-full flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>

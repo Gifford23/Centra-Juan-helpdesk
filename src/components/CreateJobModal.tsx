@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Copy,
   ChevronDown,
+  ClipboardCheck,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { logSystemAction } from "../utils/auditLog";
@@ -91,9 +92,13 @@ export default function CreateJobModal({
       // Show the success screen with the Tracking ID
       setIsSubmitting(false);
       setSuccessTrackingId(newTrackingId);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error saving job order:", error);
-      setErrorMessage(error.message || "An error occurred while saving.");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "An error occurred while saving.",
+      );
       setIsSubmitting(false);
     }
   };
@@ -119,8 +124,11 @@ export default function CreateJobModal({
         {/* SUCCESS SCREEN */}
         {successTrackingId ? (
           <div className="p-6 sm:p-12 flex flex-col items-center justify-center text-center bg-white h-full">
-            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6">
+            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 relative">
               <CheckCircle2 className="w-10 h-10" />
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white border border-emerald-200 text-emerald-600 flex items-center justify-center shadow-sm">
+                <ClipboardCheck className="w-4 h-4" />
+              </div>
             </div>
             <h2 className="text-3xl font-black text-gray-900 tracking-tight mb-2">
               Job Order Created!
@@ -156,13 +164,18 @@ export default function CreateJobModal({
           <>
             {/* Standard Modal Header */}
             <div className="flex items-center justify-between px-4 sm:px-8 py-5 border-b border-gray-100 bg-white">
-              <div>
-                <h2 className="text-xl font-black text-gray-900 tracking-tight uppercase">
-                  Official Job Order
-                </h2>
-                <p className="text-sm text-gray-500 font-medium mt-0.5">
-                  Central Juan I.T. Solutions
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shadow-sm">
+                  <ClipboardCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 tracking-tight uppercase">
+                    Official Job Order
+                  </h2>
+                  <p className="text-sm text-gray-500 font-medium mt-0.5">
+                    Central Juan I.T. Solutions
+                  </p>
+                </div>
               </div>
               <button
                 onClick={onClose}

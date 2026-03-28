@@ -24,6 +24,10 @@ import {
 export default function DashboardContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth < 640;
+  });
   const navigate = useNavigate();
 
   // Read the logged-in user to determine access level
@@ -66,6 +70,12 @@ export default function DashboardContent() {
   // Fetch Data when the component loads
   useEffect(() => {
     fetchDashboardData();
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const fetchDashboardData = async () => {
@@ -319,11 +329,16 @@ export default function DashboardContent() {
                 Number of repair tickets received over the last 7 days.
               </p>
             </div>
-            <div className="h-[250px] w-full">
+            <div className="h-[220px] sm:h-[250px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={barChartData}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  margin={{
+                    top: 10,
+                    right: isMobile ? 0 : 10,
+                    left: isMobile ? -8 : -20,
+                    bottom: 0,
+                  }}
                 >
                   <CartesianGrid
                     strokeDasharray="3 3"
@@ -334,14 +349,14 @@ export default function DashboardContent() {
                     dataKey="date"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 12, fill: "#6b7280" }}
-                    dy={10}
+                    tick={{ fontSize: isMobile ? 10 : 12, fill: "#6b7280" }}
+                    dy={isMobile ? 6 : 10}
                   />
                   <YAxis
                     allowDecimals={false}
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 12, fill: "#6b7280" }}
+                    tick={{ fontSize: isMobile ? 10 : 12, fill: "#6b7280" }}
                   />
                   <RechartsTooltip
                     cursor={{ fill: "#f8fafc" }}
@@ -355,7 +370,7 @@ export default function DashboardContent() {
                     dataKey="Tickets"
                     fill="#3b82f6"
                     radius={[6, 6, 0, 0]}
-                    maxBarSize={50}
+                    maxBarSize={isMobile ? 36 : 50}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -372,7 +387,7 @@ export default function DashboardContent() {
                 Breakdown by complaint category.
               </p>
             </div>
-            <div className="flex-1 h-[250px] w-full flex items-center justify-center">
+            <div className="flex-1 h-[220px] sm:h-[250px] w-full flex items-center justify-center">
               {pieChartData.length === 0 ? (
                 <p className="text-gray-400 font-medium text-sm">
                   No issue data available yet.
@@ -384,13 +399,13 @@ export default function DashboardContent() {
                       data={pieChartData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
+                      innerRadius={isMobile ? 38 : 50}
+                      outerRadius={isMobile ? 66 : 80}
                       paddingAngle={5}
                       dataKey="value"
                       stroke="none"
                     >
-                      {pieChartData.map((entry, index) => (
+                      {pieChartData.map((_, index) => (
                         <Cell
                           key={`cell-${index}`}
                           fill={PIE_COLORS[index % PIE_COLORS.length]}
@@ -404,12 +419,14 @@ export default function DashboardContent() {
                         boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                       }}
                     />
-                    <Legend
-                      verticalAlign="bottom"
-                      height={36}
-                      iconType="circle"
-                      wrapperStyle={{ fontSize: "12px", paddingTop: "20px" }}
-                    />
+                    {!isMobile && (
+                      <Legend
+                        verticalAlign="bottom"
+                        height={36}
+                        iconType="circle"
+                        wrapperStyle={{ fontSize: "12px", paddingTop: "20px" }}
+                      />
+                    )}
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -447,96 +464,168 @@ export default function DashboardContent() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left border-collapse">
-              <thead>
-                <tr>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
-                    Job Order
-                  </th>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
-                    Assigned Tech
-                  </th>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
-                    Device
-                  </th>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
-                    Current Status
-                  </th>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
-                    Date Logged
-                  </th>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-center">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {activeWorkload.map((job) => (
-                  <tr
-                    key={job.id}
-                    className="hover:bg-blue-50/30 transition-colors group cursor-pointer"
-                  >
-                    <td className="px-4 sm:px-7 py-5 font-bold text-gray-900">
-                      #{job.id}
-                    </td>
-                    <td className="px-4 sm:px-7 py-5">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-white shadow-sm ${
-                            job.tech === "Unassigned"
-                              ? "bg-gray-100 text-gray-500"
-                              : "bg-gradient-to-tr from-blue-600 to-blue-400 text-white"
-                          }`}
-                        >
-                          {job.tech === "Unassigned" ? "?" : job.tech.charAt(0)}
-                        </div>
-                        <span
-                          className={`text-sm font-medium ${job.tech === "Unassigned" ? "text-gray-400 italic" : "text-gray-900"}`}
-                        >
-                          {job.tech}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 sm:px-7 py-5 text-sm text-gray-600 font-medium">
+          <>
+            <div className="md:hidden p-3 space-y-3">
+              {activeWorkload.map((job) => (
+                <div
+                  key={job.id}
+                  className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-bold text-gray-900">#{job.id}</p>
+                      <p className="text-xs text-gray-500 mt-0.5 font-medium">
+                        {job.time}
+                      </p>
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-[11px] font-bold border ${
+                        job.status === "Diagnosing"
+                          ? "bg-purple-50 text-purple-700 border-purple-200/60"
+                          : job.status === "In Progress"
+                            ? "bg-blue-50 text-blue-700 border-blue-200/60"
+                            : job.status === "Waiting on Parts"
+                              ? "bg-amber-50 text-amber-700 border-amber-200/60"
+                              : job.status === "Ready" ||
+                                  job.status === "Ready for Pickup"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                                : "bg-gray-50 text-gray-600 border-gray-200/60"
+                      }`}
+                    >
+                      {job.status}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 space-y-2">
+                    <p className="text-sm text-gray-700 font-medium truncate">
                       {job.device}
-                    </td>
-                    <td className="px-4 sm:px-7 py-5">
-                      <span
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold border ${
-                          job.status === "Diagnosing"
-                            ? "bg-purple-50 text-purple-700 border-purple-200/60"
-                            : job.status === "In Progress"
-                              ? "bg-blue-50 text-blue-700 border-blue-200/60"
-                              : job.status === "Waiting on Parts"
-                                ? "bg-amber-50 text-amber-700 border-amber-200/60"
-                                : job.status === "Ready" ||
-                                    job.status === "Ready for Pickup"
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
-                                  : "bg-gray-50 text-gray-600 border-gray-200/60"
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-white shadow-sm ${
+                          job.tech === "Unassigned"
+                            ? "bg-gray-100 text-gray-500"
+                            : "bg-gradient-to-tr from-blue-600 to-blue-400 text-white"
                         }`}
                       >
-                        {job.status}
-                      </span>
-                    </td>
-                    <td className="px-4 sm:px-7 py-5 text-sm text-gray-500 font-medium">
-                      {job.time}
-                    </td>
-                    <td className="px-4 sm:px-7 py-5 text-center">
-                      <button
-                        // UPDATED: Now navigates directly to the specific Job Order Details page!
-                        onClick={() => navigate(`/job-orders/${job.id}`)}
-                        className="text-gray-400 hover:text-gray-900 bg-transparent hover:bg-gray-100 p-2 rounded-lg transition-all mx-auto block"
-                        title="View Ticket Details"
+                        {job.tech === "Unassigned" ? "?" : job.tech.charAt(0)}
+                      </div>
+                      <span
+                        className={`text-sm ${
+                          job.tech === "Unassigned"
+                            ? "text-gray-400 italic"
+                            : "text-gray-900 font-medium"
+                        }`}
                       >
-                        <Eye className="w-5 h-5" />
-                      </button>
-                    </td>
+                        {job.tech}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => navigate(`/job-orders/${job.id}`)}
+                    className="mt-4 w-full inline-flex items-center justify-center gap-2 text-gray-700 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors"
+                    title="View Ticket Details"
+                  >
+                    <Eye className="w-4 h-4" /> View Details
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[760px] text-left border-collapse">
+                <thead>
+                  <tr>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                      Job Order
+                    </th>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                      Assigned Tech
+                    </th>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                      Device
+                    </th>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                      Current Status
+                    </th>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                      Date Logged
+                    </th>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-center">
+                      Action
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {activeWorkload.map((job) => (
+                    <tr
+                      key={job.id}
+                      className="hover:bg-blue-50/30 transition-colors group cursor-pointer"
+                    >
+                      <td className="px-4 sm:px-7 py-5 font-bold text-gray-900">
+                        #{job.id}
+                      </td>
+                      <td className="px-4 sm:px-7 py-5">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-white shadow-sm ${
+                              job.tech === "Unassigned"
+                                ? "bg-gray-100 text-gray-500"
+                                : "bg-gradient-to-tr from-blue-600 to-blue-400 text-white"
+                            }`}
+                          >
+                            {job.tech === "Unassigned"
+                              ? "?"
+                              : job.tech.charAt(0)}
+                          </div>
+                          <span
+                            className={`text-sm font-medium ${job.tech === "Unassigned" ? "text-gray-400 italic" : "text-gray-900"}`}
+                          >
+                            {job.tech}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 sm:px-7 py-5 text-sm text-gray-600 font-medium">
+                        {job.device}
+                      </td>
+                      <td className="px-4 sm:px-7 py-5">
+                        <span
+                          className={`px-3.5 py-1.5 rounded-full text-xs font-bold border ${
+                            job.status === "Diagnosing"
+                              ? "bg-purple-50 text-purple-700 border-purple-200/60"
+                              : job.status === "In Progress"
+                                ? "bg-blue-50 text-blue-700 border-blue-200/60"
+                                : job.status === "Waiting on Parts"
+                                  ? "bg-amber-50 text-amber-700 border-amber-200/60"
+                                  : job.status === "Ready" ||
+                                      job.status === "Ready for Pickup"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                                    : "bg-gray-50 text-gray-600 border-gray-200/60"
+                          }`}
+                        >
+                          {job.status}
+                        </span>
+                      </td>
+                      <td className="px-4 sm:px-7 py-5 text-sm text-gray-500 font-medium">
+                        {job.time}
+                      </td>
+                      <td className="px-4 sm:px-7 py-5 text-center">
+                        <button
+                          // UPDATED: Now navigates directly to the specific Job Order Details page!
+                          onClick={() => navigate(`/job-orders/${job.id}`)}
+                          className="text-gray-400 hover:text-gray-900 bg-transparent hover:bg-gray-100 p-2 rounded-lg transition-all mx-auto block"
+                          title="View Ticket Details"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

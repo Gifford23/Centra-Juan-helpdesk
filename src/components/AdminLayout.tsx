@@ -12,6 +12,8 @@ import {
   Tickets,
   ClipboardList,
   Activity,
+  Menu,
+  X,
 } from "lucide-react";
 import technician from "../assets/technician.png";
 import { supabase } from "../lib/supabase";
@@ -35,6 +37,7 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -47,12 +50,44 @@ export default function AdminLayout({
   const savedUser = JSON.parse(
     localStorage.getItem("central_juan_user") || "{}",
   );
-  const isSuperAdmin = savedUser?.role === "Super Admin";
+
+  // Create a dynamic state for the user profile so the avatar updates instantly
+  const [userProfile, setUserProfile] = useState(savedUser);
+  const isSuperAdmin = userProfile?.role === "Super Admin";
 
   const notificationStorageKey = useMemo(
-    () => `central_juan_notifications_read_at_${savedUser?.id || "default"}`,
-    [savedUser?.id],
+    () => `central_juan_notifications_read_at_${userProfile?.id || "default"}`,
+    [userProfile?.id],
   );
+
+  // Listen for changes to local storage to update avatar instantly across components
+  useEffect(() => {
+    const syncUserProfile = () => {
+      setUserProfile(
+        JSON.parse(localStorage.getItem("central_juan_user") || "{}"),
+      );
+    };
+
+    const handleUserUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail) {
+        setUserProfile(customEvent.detail);
+        return;
+      }
+      syncUserProfile();
+    };
+
+    window.addEventListener("storage", syncUserProfile);
+    window.addEventListener("central_juan_user_updated", handleUserUpdated);
+
+    return () => {
+      window.removeEventListener("storage", syncUserProfile);
+      window.removeEventListener(
+        "central_juan_user_updated",
+        handleUserUpdated,
+      );
+    };
+  }, []);
 
   const formatRelativeTime = (isoString: string) => {
     const date = new Date(isoString);
@@ -239,6 +274,21 @@ export default function AdminLayout({
     };
   }, [fetchNotifications]);
 
+  useEffect(() => {
+    setShowMobileMenu(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!showMobileMenu) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showMobileMenu]);
+
   const unreadCount = notifications.filter(
     (item) => !lastReadAt || new Date(item.createdAt) > new Date(lastReadAt),
   ).length;
@@ -250,8 +300,8 @@ export default function AdminLayout({
       ========================================== */}
       <aside
         className="fixed top-0 left-0 h-screen bg-blue-600 border-r border-blue-700 text-white z-50 
-                      w-16 sm:w-20 md:hover:w-64 transition-all duration-300 ease-in-out group 
-                      overflow-hidden flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]"
+                      w-16 sm:w-20 md:hover:w-64 transition-all duration-300 ease-in-out group hidden md:flex
+                      overflow-hidden flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]"
       >
         {/* Logo Section */}
         <div className="h-16 flex items-center px-4 sm:px-6 border-b border-blue-700 whitespace-nowrap">
@@ -348,10 +398,132 @@ export default function AdminLayout({
         </div>
       </aside>
 
+      {/* Mobile Right-Side Drawer */}
+      {showMobileMenu && (
+        <div className="fixed inset-0 z-[70] md:hidden">
+          <div
+            className="absolute inset-0 bg-gray-900/45"
+            onClick={() => setShowMobileMenu(false)}
+          />
+
+          <aside className="absolute right-0 top-0 h-full w-[84vw] max-w-[320px] bg-blue-600 text-white shadow-2xl border-l border-blue-700 animate-in slide-in-from-right duration-200 flex flex-col">
+            <div className="h-16 flex items-center justify-between px-4 border-b border-blue-700">
+              <div className="flex items-center gap-2 min-w-0">
+                <img
+                  src={technician}
+                  alt="Technician"
+                  className="w-8 h-8 object-cover flex-shrink-0"
+                />
+                <span className="font-black text-lg tracking-tight truncate">
+                  Help Desk
+                </span>
+              </div>
+              <button
+                onClick={() => setShowMobileMenu(false)}
+                className="p-2 rounded-lg hover:bg-blue-700/30 transition-colors"
+                aria-label="Close navigation menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <nav className="flex-1 py-5 px-3 overflow-y-auto space-y-1.5">
+              <Link
+                to="/"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+              >
+                <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
+                Dashboard
+              </Link>
+
+              <Link
+                to="/job-orders"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/job-orders" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+              >
+                <ClipboardList className="w-5 h-5 flex-shrink-0" />
+                Job Orders
+              </Link>
+
+              <Link
+                to="/queue"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/queue" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+              >
+                <Tickets className="w-5 h-5 flex-shrink-0" />
+                Tickets
+              </Link>
+
+              <Link
+                to="/customers"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/customers" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+              >
+                <Users className="w-5 h-5 flex-shrink-0" />
+                Customers
+              </Link>
+
+              {isSuperAdmin && (
+                <Link
+                  to="/personnel"
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/personnel" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+                >
+                  <ShieldCheck className="w-5 h-5 flex-shrink-0" />
+                  Personnel
+                </Link>
+              )}
+
+              {isSuperAdmin && (
+                <Link
+                  to="/logs"
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/logs" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+                >
+                  <Activity className="w-5 h-5 flex-shrink-0" />
+                  System Logs
+                </Link>
+              )}
+
+              <Link
+                to="/settings"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/settings" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+              >
+                <Settings className="w-5 h-5 flex-shrink-0" />
+                Settings
+              </Link>
+            </nav>
+
+            <div className="border-t border-blue-700 px-4 py-4 bg-blue-600/50">
+              <div className="flex items-center gap-3">
+                {userProfile?.avatar_url ? (
+                  <img
+                    src={userProfile.avatar_url}
+                    alt="Profile"
+                    className="w-9 h-9 rounded-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className={`w-9 h-9 text-white rounded-full flex items-center justify-center font-bold ${isSuperAdmin ? "bg-gradient-to-tr from-indigo-600 to-indigo-500" : "bg-gradient-to-tr from-blue-700 to-blue-500"}`}
+                  >
+                    {userProfile?.full_name
+                      ? userProfile.full_name.charAt(0).toUpperCase()
+                      : "U"}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-bold truncate">
+                    {userProfile?.full_name || "Unknown User"}
+                  </p>
+                  <p className="text-xs text-blue-100 truncate">
+                    {userProfile?.role || "Staff"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* ==========================================
           MAIN CONTENT AREA 
       ========================================== */}
-      <div className="flex-1 ml-16 sm:ml-20 flex flex-col min-h-screen transition-all duration-300">
+      <div className="flex-1 ml-0 md:ml-20 flex flex-col min-h-screen transition-all duration-300">
         {/* TOP NAVIGATION BAR (Glassmorphism Effect) */}
         <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-3 sm:px-5 lg:px-8 sticky top-0 z-40 shadow-sm">
           <div className="flex-1 flex items-center">
@@ -362,6 +534,14 @@ export default function AdminLayout({
 
           {/* Right Actions (Notifications & Profile) */}
           <div className="flex items-center gap-2 sm:gap-4 ml-2 sm:ml-4">
+            <button
+              onClick={() => setShowMobileMenu(true)}
+              className="md:hidden p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Open navigation menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
             {/* Notification Bell */}
             <div className="relative">
               <button
@@ -455,21 +635,29 @@ export default function AdminLayout({
                 className="flex items-center gap-3 cursor-pointer group"
               >
                 {/* 3. DYNAMIC PROFILE AVATAR */}
-                <div
-                  className={`w-9 h-9 text-white rounded-full flex items-center justify-center font-bold shadow-md transition-transform group-hover:scale-105 ${isSuperAdmin ? "bg-gradient-to-tr from-indigo-600 to-indigo-500 shadow-indigo-500/20" : "bg-gradient-to-tr from-blue-600 to-blue-500 shadow-blue-500/20"}`}
-                >
-                  {savedUser?.full_name
-                    ? savedUser.full_name.charAt(0).toUpperCase()
-                    : "U"}
-                </div>
+                {userProfile?.avatar_url ? (
+                  <img
+                    src={userProfile.avatar_url}
+                    alt="Profile"
+                    className="w-9 h-9 rounded-full object-cover shadow-md transition-transform group-hover:scale-105 ring-2 ring-white"
+                  />
+                ) : (
+                  <div
+                    className={`w-9 h-9 text-white rounded-full flex items-center justify-center font-bold shadow-md transition-transform group-hover:scale-105 ${isSuperAdmin ? "bg-gradient-to-tr from-indigo-600 to-indigo-500 shadow-indigo-500/20" : "bg-gradient-to-tr from-blue-600 to-blue-500 shadow-blue-500/20"}`}
+                  >
+                    {userProfile?.full_name
+                      ? userProfile.full_name.charAt(0).toUpperCase()
+                      : "U"}
+                  </div>
+                )}
 
                 {/* 4. DYNAMIC PROFILE TEXT */}
                 <div className="hidden md:flex flex-col">
                   <span className="text-sm font-bold text-gray-900 leading-none mb-1">
-                    {savedUser?.full_name || "Unknown User"}
+                    {userProfile?.full_name || "Unknown User"}
                   </span>
                   <span className="text-xs font-medium text-gray-500 leading-none">
-                    {savedUser?.role || "Staff"}
+                    {userProfile?.role || "Staff"}
                   </span>
                 </div>
                 <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors ml-1 hidden md:block" />
@@ -478,9 +666,20 @@ export default function AdminLayout({
               {showProfile && (
                 <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-100 rounded-lg shadow-lg p-2 z-50">
                   <button
+                    onClick={() => {
+                      setShowProfile(false);
+                      navigate("/settings");
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <Settings className="w-4 h-4 text-gray-500" />
+                    Edit Profile
+                  </button>
+
+                  <button
                     onClick={async () => {
                       await logSystemAction({
-                        userName: savedUser?.full_name || "Unknown User",
+                        userName: userProfile?.full_name || "Unknown User",
                         action: "User logout",
                         details: "Signed out from admin dashboard.",
                       });

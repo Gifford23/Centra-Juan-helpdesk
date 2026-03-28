@@ -44,7 +44,12 @@ export default function JobOrdersContent() {
   const isSuperAdmin = savedUser?.role === "Super Admin";
 
   // State to toggle between Kanban Board and Table List
-  const [viewMode, setViewMode] = useState<"board" | "list">("board");
+  const [viewMode, setViewMode] = useState<"board" | "list">(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      return "list";
+    }
+    return "board";
+  });
 
   // Store the raw list for the Table view
   const [allJobs, setAllJobs] = useState<JobCardData[]>([]);
@@ -68,6 +73,17 @@ export default function JobOrdersContent() {
     if (isSuperAdmin) {
       fetchTechnicians();
     }
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setViewMode("list");
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const fetchTechnicians = async () => {
@@ -234,7 +250,7 @@ export default function JobOrdersContent() {
           <div className="flex bg-gray-200/50 p-1 rounded-xl border border-gray-200 flex-1 sm:flex-none">
             <button
               onClick={() => setViewMode("board")}
-              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${viewMode === "board" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              className={`hidden sm:flex flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold items-center justify-center gap-2 transition-all ${viewMode === "board" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
             >
               <LayoutGrid className="w-4 h-4" /> Board
             </button>
@@ -296,7 +312,7 @@ export default function JobOrdersContent() {
               VIEW 1: KANBAN BOARD
           ========================================== */}
           {viewMode === "board" && (
-            <div className="flex-1 overflow-x-auto pb-2 sm:pb-4 -mx-1 sm:mx-0">
+            <div className="hidden md:block flex-1 overflow-x-auto pb-2 sm:pb-4 -mx-1 sm:mx-0">
               <div className="flex gap-4 sm:gap-6 h-full min-w-[1000px] px-1 sm:px-0">
                 {/* COLUMN 1: RECEIVED */}
                 <div className="flex-1 flex flex-col bg-gray-50/50 rounded-2xl border border-gray-100 p-4">
@@ -424,7 +440,72 @@ export default function JobOrdersContent() {
           ========================================== */}
           {viewMode === "list" && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex-1 flex flex-col mb-4">
-              <div className="overflow-x-auto flex-1">
+              <div className="md:hidden p-3 space-y-3">
+                {filteredJobs.map((job) => (
+                  <div
+                    key={job.id}
+                    className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-black text-gray-900">#{job.id}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 font-medium">
+                          {job.time}
+                        </p>
+                      </div>
+                      <span
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded border uppercase tracking-wider ${job.priority === "High" ? "bg-red-50 text-red-600 border-red-200" : "bg-gray-50 text-gray-500 border-gray-200"}`}
+                      >
+                        {job.priority}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      <p className="font-bold text-sm text-gray-900 truncate">
+                        {job.device}
+                      </p>
+                      <p className="text-xs font-medium text-gray-500 truncate">
+                        {job.customer}
+                      </p>
+                      <div>
+                        <span
+                          className={`inline-flex px-3 py-1.5 rounded-full text-xs font-bold border ${job.currentStatus === "Pending Drop-off" || job.currentStatus === "Received" ? "bg-blue-50 text-blue-700 border-blue-200/60" : job.currentStatus === "Diagnosing" ? "bg-purple-50 text-purple-700 border-purple-200/60" : job.currentStatus === "Waiting on Parts" || job.currentStatus === "In Progress" ? "bg-amber-50 text-amber-700 border-amber-200/60" : job.currentStatus === "Ready for Pickup" || job.currentStatus === "Ready" ? "bg-emerald-50 text-emerald-700 border-emerald-200/60" : "bg-gray-50 text-gray-600 border-gray-200/60"}`}
+                        >
+                          {job.currentStatus}
+                        </span>
+                      </div>
+                      <div className="pt-1">
+                        {job.techInitials ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-500 to-blue-400 text-white flex items-center justify-center text-xs font-bold shadow-sm ring-2 ring-white">
+                              {job.techInitials}
+                            </div>
+                            <span className="text-sm font-bold text-gray-900 truncate">
+                              {job.techFullName}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-sm font-bold text-red-500 bg-red-50 px-3 py-1 rounded-lg border border-red-100">
+                            Unassigned
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex justify-end">
+                      <ActionMenu
+                        job={job}
+                        technicians={technicians}
+                        onUpdate={fetchBoardData}
+                        isSuperAdmin={isSuperAdmin}
+                        actorName={savedUser?.full_name || "Unknown User"}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden md:block overflow-x-auto flex-1">
                 <table className="w-full min-w-[880px] text-left border-collapse whitespace-nowrap">
                   <thead>
                     <tr className="text-xs uppercase tracking-wider border-b border-gray-200">

@@ -30,7 +30,12 @@ export default function PersonnelContent() {
   const navigate = useNavigate();
 
   // VIEW TOGGLE STATE
-  const [viewMode, setViewMode] = useState<"table" | "card">("table");
+  const [viewMode, setViewMode] = useState<"table" | "card">(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      return "card";
+    }
+    return "table";
+  });
 
   // GET LOGGED IN USER
   const savedUser = JSON.parse(
@@ -49,6 +54,17 @@ export default function PersonnelContent() {
 
   useEffect(() => {
     fetchPersonnel();
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setViewMode("card");
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const fetchPersonnel = async () => {
@@ -193,7 +209,7 @@ export default function PersonnelContent() {
             </button>
             <button
               onClick={() => setViewMode("table")}
-              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${viewMode === "table" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              className={`hidden sm:flex flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold items-center justify-center gap-2 transition-all ${viewMode === "table" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
             >
               <List className="w-4 h-4" /> Table
             </button>
@@ -241,11 +257,19 @@ export default function PersonnelContent() {
                 >
                   {/* Top Row: Avatar & Actions */}
                   <div className="flex justify-between items-start mb-5">
-                    <div
-                      className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl shadow-sm text-white ${person.role === "Super Admin" ? "bg-gradient-to-tr from-indigo-600 to-indigo-400" : "bg-gradient-to-tr from-blue-500 to-blue-400"}`}
-                    >
-                      {person.full_name.charAt(0).toUpperCase()}
-                    </div>
+                    {person.avatar_url ? (
+                      <img
+                        src={person.avatar_url}
+                        alt={person.full_name}
+                        className="w-14 h-14 rounded-2xl object-cover shadow-sm ring-2 ring-white"
+                      />
+                    ) : (
+                      <div
+                        className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl shadow-sm text-white ${person.role === "Super Admin" ? "bg-gradient-to-tr from-indigo-600 to-indigo-400" : "bg-gradient-to-tr from-blue-500 to-blue-400"}`}
+                      >
+                        {person.full_name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => setPersonToEdit(person)}
@@ -313,7 +337,7 @@ export default function PersonnelContent() {
               VIEW 2: TABLE VIEW
           ========================================== */}
           {viewMode === "table" && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+            <div className="hidden md:flex bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex-col">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[960px] text-left border-collapse whitespace-nowrap">
                   <thead>
@@ -343,11 +367,19 @@ export default function PersonnelContent() {
                       >
                         <td className="px-4 sm:px-7 py-5">
                           <div className="flex items-center gap-4">
-                            <div
-                              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ring-2 ring-white shadow-sm ${person.role === "Super Admin" ? "bg-gradient-to-tr from-indigo-600 to-indigo-400 text-white" : "bg-gradient-to-tr from-blue-500 to-blue-400 text-white"}`}
-                            >
-                              {person.full_name.charAt(0).toUpperCase()}
-                            </div>
+                            {person.avatar_url ? (
+                              <img
+                                src={person.avatar_url}
+                                alt={person.full_name}
+                                className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm"
+                              />
+                            ) : (
+                              <div
+                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ring-2 ring-white shadow-sm ${person.role === "Super Admin" ? "bg-gradient-to-tr from-indigo-600 to-indigo-400 text-white" : "bg-gradient-to-tr from-blue-500 to-blue-400 text-white"}`}
+                              >
+                                {person.full_name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
                             <div>
                               <p className="font-bold text-gray-900">
                                 {person.full_name}{" "}
@@ -435,14 +467,14 @@ export default function PersonnelContent() {
               if (!isSubmitting) setIsCreateModalOpen(false);
             }}
           ></div>
-          <div className="relative bg-white w-full max-w-lg rounded-[24px] shadow-2xl shadow-indigo-900/10 animate-in fade-in zoom-in-95 duration-300 flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-8 py-6 border-b border-gray-100 bg-white">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+          <div className="relative bg-white w-full max-w-lg max-h-[90vh] rounded-2xl sm:rounded-[24px] shadow-2xl shadow-indigo-900/10 animate-in fade-in zoom-in-95 duration-300 flex flex-col overflow-y-auto">
+            <div className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-100 bg-white">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-50 text-indigo-600 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0">
                   <UserPlus className="w-6 h-6" />
                 </div>
-                <div>
-                  <h2 className="text-xl font-black text-gray-900 tracking-tight">
+                <div className="min-w-0">
+                  <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight truncate">
                     Create New Account
                   </h2>
                   <p className="text-sm text-gray-500 font-medium mt-0.5">
@@ -461,7 +493,7 @@ export default function PersonnelContent() {
 
             <form
               onSubmit={handleAddPersonnel}
-              className="p-8 space-y-5 bg-gray-50/30"
+              className="p-4 sm:p-8 space-y-4 sm:space-y-5 bg-gray-50/30"
             >
               {errorMessage && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2">
@@ -554,7 +586,7 @@ export default function PersonnelContent() {
                 </p>
               </div>
 
-              <div className="pt-6 mt-6 border-t border-gray-100 flex gap-3">
+              <div className="pt-6 mt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}

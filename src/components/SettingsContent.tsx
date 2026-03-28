@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   User,
   Mail,
   Lock,
+  Eye,
+  EyeOff,
   ShieldCheck,
   Wrench,
   Loader2,
@@ -10,6 +12,7 @@ import {
   AlertCircle,
   Globe,
   Settings as SettingsIcon,
+  Camera, // <-- Added Camera icon
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { logSystemAction } from "../utils/auditLog";
@@ -19,6 +22,10 @@ export default function SettingsContent() {
   const [isFetching, setIsFetching] = useState(true);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [showProfileSuccessDialog, setShowProfileSuccessDialog] =
+    useState(false);
+  const [showSystemSuccessDialog, setShowSystemSuccessDialog] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<"account" | "system">("account");
 
   // Get the currently logged-in user
@@ -33,6 +40,13 @@ export default function SettingsContent() {
     email: savedUser.email || "",
     password: "",
   });
+
+  // State for Avatar Upload
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(
+    savedUser.avatar_url || null,
+  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // State for Global System Settings
   const [systemSettingsId, setSystemSettingsId] = useState<number | null>(null);
@@ -70,6 +84,15 @@ export default function SettingsContent() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Handle local avatar file selection
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file)); // Show instant preview
+    }
+  };
+
   const getErrorMessage = (error: unknown, fallback: string) => {
     if (error instanceof Error && error.message) return error.message;
     return fallback;
@@ -82,14 +105,37 @@ export default function SettingsContent() {
     setSuccessMessage("");
 
     try {
-      // 1. UPDATE PERSONAL PROFILE
+      // 1. UPLOAD NEW AVATAR (If a new one was selected)
+      let newAvatarUrl = savedUser.avatar_url; // Keep current if no new file
+
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split(".").pop();
+        const fileName = `${savedUser.id}-${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(fileName, avatarFile);
+
+        if (uploadError) throw uploadError;
+
+        // Get the public URL for the newly uploaded image
+        const { data: publicUrlData } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(fileName);
+
+        newAvatarUrl = publicUrlData.publicUrl;
+      }
+
+      // 2. UPDATE PERSONAL PROFILE IN DATABASE
       const updatePayload: {
         full_name: string;
         email: string;
         password?: string;
+        avatar_url?: string;
       } = {
         full_name: formData.fullName,
         email: formData.email,
+        avatar_url: newAvatarUrl, // Save the new image URL
       };
 
       if (formData.password.trim() !== "") {
@@ -110,6 +156,11 @@ export default function SettingsContent() {
       // Update local storage so UI syncs
       const updatedUser = { ...savedUser, ...updatePayload };
       localStorage.setItem("central_juan_user", JSON.stringify(updatedUser));
+      window.dispatchEvent(
+        new CustomEvent("central_juan_user_updated", {
+          detail: updatedUser,
+        }),
+      );
 
       await logSystemAction({
         userName: savedUser?.full_name || "Unknown User",
@@ -117,7 +168,7 @@ export default function SettingsContent() {
         details: "Updated personal profile information.",
       });
 
-      setSuccessMessage("Profile settings were successfully updated!");
+      setShowProfileSuccessDialog(true);
       setFormData({ ...formData, password: "" }); // Clear password field
     } catch (error: unknown) {
       console.error("Error updating settings:", error);
@@ -151,7 +202,7 @@ export default function SettingsContent() {
         details: `Set public ticket portal to ${allowPublicTickets ? "enabled" : "disabled"}.`,
       });
 
-      setSuccessMessage("System configuration was successfully updated!");
+      setShowSystemSuccessDialog(true);
     } catch (error: unknown) {
       console.error("Error updating system settings:", error);
       setErrorMessage(
@@ -217,13 +268,45 @@ export default function SettingsContent() {
         {/* LEFT COLUMN: Profile Summary Card */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center lg:sticky lg:top-24">
+            {/* CLICKABLE AVATAR UPLOAD */}
             <div
-              className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center font-black text-4xl shadow-lg mb-4 text-white ${savedUser.role === "Super Admin" ? "bg-gradient-to-tr from-indigo-600 to-indigo-400 shadow-indigo-500/20" : "bg-gradient-to-tr from-blue-600 to-blue-400 shadow-blue-500/20"}`}
+              className="relative w-24 h-24 mx-auto mb-2 group cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
             >
-              {savedUser?.full_name
-                ? savedUser.full_name.charAt(0).toUpperCase()
-                : "U"}
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt="Profile"
+                  className="w-24 h-24 rounded-full object-cover shadow-lg border-4 border-white"
+                />
+              ) : (
+                <div
+                  className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center font-black text-4xl shadow-lg text-white border-4 border-white ${savedUser.role === "Super Admin" ? "bg-gradient-to-tr from-indigo-600 to-indigo-400 shadow-indigo-500/20" : "bg-gradient-to-tr from-blue-600 to-blue-400 shadow-blue-500/20"}`}
+                >
+                  {savedUser?.full_name
+                    ? savedUser.full_name.charAt(0).toUpperCase()
+                    : "U"}
+                </div>
+              )}
+
+              {/* Hover Overlay */}
+              <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Camera className="w-8 h-8 text-white" />
+              </div>
             </div>
+
+            {/* Hidden Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleAvatarChange}
+            />
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-4 font-bold">
+              Click image to change
+            </p>
+
             <h2 className="text-xl font-bold text-gray-900">
               {savedUser.full_name}
             </h2>
@@ -318,13 +401,27 @@ export default function SettingsContent() {
                     <div className="relative">
                       <Lock className="w-5 h-5 text-gray-400 absolute left-3.5 top-3.5" />
                       <input
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         name="password"
                         value={formData.password}
                         onChange={handleChange}
-                        className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium"
+                        className="w-full pl-11 pr-11 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium"
                         placeholder="Enter new password"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        aria-label={
+                          showPassword ? "Hide password" : "Show password"
+                        }
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -335,12 +432,6 @@ export default function SettingsContent() {
                   <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 flex-shrink-0" />{" "}
                     {errorMessage}
-                  </div>
-                )}
-                {successMessage && (
-                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2 animate-in fade-in">
-                    <CheckCircle2 className="w-5 h-5 flex-shrink-0" />{" "}
-                    {successMessage}
                   </div>
                 )}
 
@@ -438,6 +529,74 @@ export default function SettingsContent() {
           )}
         </div>
       </div>
+
+      {showProfileSuccessDialog && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
+            onClick={() => setShowProfileSuccessDialog(false)}
+          ></div>
+          <div className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-gray-900">
+                  Profile Updated
+                </h3>
+                <p className="text-sm text-gray-500 font-medium mt-0.5">
+                  Your profile changes were saved successfully!
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowProfileSuccessDialog(false)}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSystemSuccessDialog && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
+            onClick={() => setShowSystemSuccessDialog(false)}
+          ></div>
+          <div className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-gray-900">
+                  System Settings Updated
+                </h3>
+                <p className="text-sm text-gray-500 font-medium mt-0.5">
+                  System configuration was successfully updated!
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowSystemSuccessDialog(false)}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

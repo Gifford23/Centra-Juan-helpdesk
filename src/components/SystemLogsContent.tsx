@@ -13,8 +13,16 @@ import {
 import { supabase } from "../lib/supabase";
 import { logSystemAction } from "../utils/auditLog";
 
+type SystemLogEntry = {
+  id: number;
+  user_name: string;
+  action: string;
+  details: string | null;
+  created_at: string;
+};
+
 export default function SystemLogsContent() {
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<SystemLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -32,7 +40,7 @@ export default function SystemLogsContent() {
     if (isSuperAdmin) {
       fetchLogs();
     }
-  }, []);
+  }, [isSuperAdmin]);
 
   const fetchLogs = async () => {
     try {
@@ -212,72 +220,122 @@ export default function SystemLogsContent() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto overflow-y-auto max-h-[560px]">
-            <table className="w-full min-w-[900px] text-left border-collapse whitespace-nowrap">
-              <thead>
-                <tr>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
-                    Date & Time
-                  </th>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
-                    User
-                  </th>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
-                    Action
-                  </th>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100 w-full">
-                    Details
-                  </th>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100 text-right">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredLogs.map((log) => (
-                  <tr
-                    key={log.id}
-                    className="hover:bg-blue-50/30 transition-colors group"
-                  >
-                    <td className="px-4 sm:px-7 py-4">
-                      <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
-                        <Calendar className="w-4 h-4 text-gray-400" />
-                        {new Date(log.created_at).toLocaleString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                    </td>
-                    <td className="px-4 sm:px-7 py-4">
-                      <div className="flex items-center gap-2 text-sm font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg w-fit">
-                        <User className="w-4 h-4" />
-                        {log.user_name}
-                      </div>
-                    </td>
-                    <td className="px-4 sm:px-7 py-4">
-                      <span className="text-sm font-bold text-gray-900">
-                        {log.action}
-                      </span>
-                    </td>
-                    <td className="px-4 sm:px-7 py-4 text-sm text-gray-500 font-medium truncate max-w-md">
+          <>
+            <div className="md:hidden divide-y divide-gray-100">
+              {filteredLogs.map((log) => (
+                <div key={log.id} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+                      <Calendar className="w-4 h-4" />
+                      {new Date(log.created_at).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                    <button
+                      onClick={() => setLogToDelete(log.id)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete Log"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm font-bold text-blue-700 bg-blue-50 px-3 py-2 rounded-lg w-fit">
+                    <User className="w-4 h-4" />
+                    {log.user_name}
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1">
+                      Action
+                    </p>
+                    <p className="text-sm font-bold text-gray-900 break-words">
+                      {log.action}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1">
+                      Details
+                    </p>
+                    <p className="text-sm text-gray-600 font-medium break-words">
                       {log.details || "-"}
-                    </td>
-                    <td className="px-4 sm:px-7 py-4 text-right">
-                      <button
-                        onClick={() => setLogToDelete(log.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete Log"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-[560px]">
+              <table className="w-full min-w-[900px] text-left border-collapse whitespace-nowrap">
+                <thead>
+                  <tr>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                      Date & Time
+                    </th>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                      User
+                    </th>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                      Action
+                    </th>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100 w-full">
+                      Details
+                    </th>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100 text-right">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredLogs.map((log) => (
+                    <tr
+                      key={log.id}
+                      className="hover:bg-blue-50/30 transition-colors group"
+                    >
+                      <td className="px-4 sm:px-7 py-4">
+                        <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          {new Date(log.created_at).toLocaleString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-4 sm:px-7 py-4">
+                        <div className="flex items-center gap-2 text-sm font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg w-fit">
+                          <User className="w-4 h-4" />
+                          {log.user_name}
+                        </div>
+                      </td>
+                      <td className="px-4 sm:px-7 py-4">
+                        <span className="text-sm font-bold text-gray-900">
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="px-4 sm:px-7 py-4 text-sm text-gray-500 font-medium truncate max-w-md">
+                        {log.details || "-"}
+                      </td>
+                      <td className="px-4 sm:px-7 py-4 text-right">
+                        <button
+                          onClick={() => setLogToDelete(log.id)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete Log"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

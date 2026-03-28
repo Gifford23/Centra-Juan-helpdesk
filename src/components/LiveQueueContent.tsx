@@ -361,118 +361,202 @@ export default function LiveQueueContent() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left border-collapse whitespace-nowrap">
-              <thead>
-                <tr>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
-                    Job Order
-                  </th>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
-                    Customer
-                  </th>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
-                    Device
-                  </th>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
-                    Technician
-                  </th>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
-                    Status
-                  </th>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-center">
-                    View
-                  </th>
-                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredQueue.map((job) => (
-                  <tr
-                    key={job.id}
-                    className="hover:bg-blue-50/30 transition-colors group"
-                  >
-                    <td className="px-4 sm:px-7 py-4">
+          <>
+            <div className="md:hidden p-3 space-y-3">
+              {filteredQueue.map((job) => (
+                <div
+                  key={job.id}
+                  className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
                       <p className="font-black text-gray-900">#{job.id}</p>
                       <p className="text-xs text-gray-500 font-medium mt-0.5">
                         {job.date}
                       </p>
-                    </td>
-                    <td className="px-4 sm:px-7 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 flex items-center justify-center text-xs font-bold ring-1 ring-gray-200">
-                          {getInitials(job.customer)}
-                        </div>
-                        <span className="text-sm font-bold text-gray-800">
-                          {job.customer}
-                        </span>
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-[11px] font-bold ${getStatusStyle(job.status)}`}
+                    >
+                      {job.status}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 flex items-center justify-center text-[11px] font-bold ring-1 ring-gray-200">
+                        {getInitials(job.customer)}
                       </div>
-                    </td>
-                    <td className="px-4 sm:px-7 py-4 text-sm text-gray-600 font-medium">
+                      <p className="text-sm font-bold text-gray-800 truncate">
+                        {job.customer}
+                      </p>
+                    </div>
+                    <p className="text-sm text-gray-700 font-medium truncate">
                       {job.device}
-                    </td>
-                    <td className="px-4 sm:px-7 py-4">
-                      <span
-                        className={`text-sm ${job.tech === "Unassigned" ? "text-gray-400 italic" : "text-gray-900 font-bold"}`}
-                      >
-                        {job.tech}
-                      </span>
-                    </td>
-                    <td className="px-4 sm:px-7 py-4">
-                      <span
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold ${getStatusStyle(job.status)}`}
-                      >
-                        {job.status}
-                      </span>
-                    </td>
-                    <td className="px-4 sm:px-7 py-4 text-center">
+                    </p>
+                    <p
+                      className={`text-xs ${job.tech === "Unassigned" ? "text-gray-400 italic" : "text-gray-700 font-bold"}`}
+                    >
+                      Technician: {job.tech}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-4 gap-2">
+                    <button
+                      onClick={() => navigate(`/job-orders/${job.id}`)}
+                      className="inline-flex items-center justify-center p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="View Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setJobToEdit(job)}
+                      className="inline-flex items-center justify-center p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Edit Job Order"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    {isSuperAdmin ? (
                       <button
-                        onClick={() => navigate(`/job-orders/${job.id}`)}
-                        className="inline-flex p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors tooltip"
-                        title="View Details"
+                        onClick={() => setJobToDelete(job.id)}
+                        className="inline-flex items-center justify-center p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete Job Order"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
-                    </td>
-                    <td className="px-4 sm:px-7 py-4 text-right">
-                      <div className="flex justify-end gap-1 transition-colors">
-                        {/* UPDATE BUTTON */}
-                        <button
-                          onClick={() => setJobToEdit(job)}
-                          className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors tooltip"
-                          title="Edit Job Order"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
+                    ) : (
+                      <button
+                        onClick={() => setJobToPrint(job.id)}
+                        className="inline-flex items-center justify-center p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Print Job Order"
+                      >
+                        <Printer className="w-4 h-4" />
+                      </button>
+                    )}
+                    {isSuperAdmin && (
+                      <button
+                        onClick={() => setJobToPrint(job.id)}
+                        className="inline-flex items-center justify-center p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Print Job Order"
+                      >
+                        <Printer className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
 
-                        {/* DELETE BUTTON: ONLY VISIBLE TO SUPER ADMINS */}
-                        {isSuperAdmin && (
-                          <button
-                            onClick={() => setJobToDelete(job.id)}
-                            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors tooltip"
-                            title="Delete Job Order"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-
-                        {/* PRINT BUTTON */}
-                        <button
-                          onClick={() => setJobToPrint(job.id)}
-                          className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors tooltip"
-                          title="Print Job Order"
-                        >
-                          <Printer className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[980px] text-left border-collapse whitespace-nowrap">
+                <thead>
+                  <tr>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                      Job Order
+                    </th>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                      Customer
+                    </th>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                      Device
+                    </th>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                      Technician
+                    </th>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                      Status
+                    </th>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-center">
+                      View
+                    </th>
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredQueue.map((job) => (
+                    <tr
+                      key={job.id}
+                      className="hover:bg-blue-50/30 transition-colors group"
+                    >
+                      <td className="px-4 sm:px-7 py-4">
+                        <p className="font-black text-gray-900">#{job.id}</p>
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">
+                          {job.date}
+                        </p>
+                      </td>
+                      <td className="px-4 sm:px-7 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 flex items-center justify-center text-xs font-bold ring-1 ring-gray-200">
+                            {getInitials(job.customer)}
+                          </div>
+                          <span className="text-sm font-bold text-gray-800">
+                            {job.customer}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 sm:px-7 py-4 text-sm text-gray-600 font-medium">
+                        {job.device}
+                      </td>
+                      <td className="px-4 sm:px-7 py-4">
+                        <span
+                          className={`text-sm ${job.tech === "Unassigned" ? "text-gray-400 italic" : "text-gray-900 font-bold"}`}
+                        >
+                          {job.tech}
+                        </span>
+                      </td>
+                      <td className="px-4 sm:px-7 py-4">
+                        <span
+                          className={`px-3.5 py-1.5 rounded-full text-xs font-bold ${getStatusStyle(job.status)}`}
+                        >
+                          {job.status}
+                        </span>
+                      </td>
+                      <td className="px-4 sm:px-7 py-4 text-center">
+                        <button
+                          onClick={() => navigate(`/job-orders/${job.id}`)}
+                          className="inline-flex p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors tooltip"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </td>
+                      <td className="px-4 sm:px-7 py-4 text-right">
+                        <div className="flex justify-end gap-1 transition-colors">
+                          <button
+                            onClick={() => setJobToEdit(job)}
+                            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors tooltip"
+                            title="Edit Job Order"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+
+                          {isSuperAdmin && (
+                            <button
+                              onClick={() => setJobToDelete(job.id)}
+                              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors tooltip"
+                              title="Delete Job Order"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => setJobToPrint(job.id)}
+                            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors tooltip"
+                            title="Print Job Order"
+                          >
+                            <Printer className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

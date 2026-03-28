@@ -12,12 +12,12 @@ import {
   Copy,
   ArrowRight,
   ChevronDown,
-  AlertTriangle,
   ImagePlus,
   UploadCloud,
   X,
 } from "lucide-react";
 import check2 from "../assets/icons/check2.png";
+import alertIcon from "../assets/icons/alert.png";
 import { supabase } from "../lib/supabase";
 import background from "../assets/background.png";
 import technician from "../assets/technician.png";
@@ -221,7 +221,7 @@ export default function SubmitTicket() {
       >
         <div className="bg-white p-10 rounded-3xl shadow-xl max-w-md w-full">
           <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-            <AlertTriangle className="w-10 h-10" />
+            <img src={alertIcon} alt="Alert" className="w-16 h-16" />
           </div>
           <h2 className="text-2xl font-black text-gray-900 mb-2">
             Portal Temporarily Closed
