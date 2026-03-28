@@ -1,15 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import CreateJobModal from "./CreateJobModal";
-import {
-  MoreVertical,
-  Plus,
-  Loader2,
-  Sunrise,
-  Sun,
-  Moon,
-  Eye,
-} from "lucide-react";
+import { Plus, Loader2, Sunrise, Sun, Moon, Eye } from "lucide-react";
 import checkIcon from "../assets/icons/check.png";
 import warningIcon from "../assets/icons/warning.png";
 import tools from "../assets/icons/tools.png";
@@ -157,7 +149,7 @@ export default function DashboardContent() {
         {isSuperAdmin && (
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition-all active:scale-95 shadow-md shadow-blue-600/20 flex items-center gap-2"
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition-all active:scale-95 shadow-md shadow-blue-600/20 flex items-center justify-center gap-2"
           >
             <Plus className="w-5 h-5" />
             Create Job Order
@@ -250,7 +242,7 @@ export default function DashboardContent() {
           MIDDLE SECTION: ACTIVE WORKLOAD TABLE
       ========================================== */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col min-h-[300px]">
-        <div className="px-7 py-6 border-b border-gray-100 flex justify-between items-center bg-white">
+        <div className="px-4 sm:px-7 py-5 sm:py-6 border-b border-gray-100 flex justify-between items-center bg-white">
           <div>
             <h2 className="text-xl font-bold text-gray-900 tracking-tight">
               {isSuperAdmin ? "Recent Job Orders" : "Your Recent Tasks"}
@@ -276,25 +268,25 @@ export default function DashboardContent() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full min-w-[760px] text-left border-collapse">
               <thead>
                 <tr>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-white bg-blue-600 border-b border-blue-700">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Job Order
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-white bg-blue-600 border-b border-blue-700">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Assigned Tech
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-white bg-blue-600 border-b border-blue-700">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Device
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-white bg-blue-600 border-b border-blue-700">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Current Status
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-white bg-blue-600 border-b border-blue-700">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Date Logged
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-white bg-blue-600 border-b border-blue-700 text-center">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-center">
                     Action
                   </th>
                 </tr>
@@ -305,10 +297,10 @@ export default function DashboardContent() {
                     key={job.id}
                     className="hover:bg-blue-50/30 transition-colors group cursor-pointer"
                   >
-                    <td className="px-7 py-5 font-bold text-gray-900">
+                    <td className="px-4 sm:px-7 py-5 font-bold text-gray-900">
                       #{job.id}
                     </td>
-                    <td className="px-7 py-5">
+                    <td className="px-4 sm:px-7 py-5">
                       <div className="flex items-center gap-3">
                         <div
                           className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-white shadow-sm ${
@@ -326,10 +318,10 @@ export default function DashboardContent() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-7 py-5 text-sm text-gray-600 font-medium">
+                    <td className="px-4 sm:px-7 py-5 text-sm text-gray-600 font-medium">
                       {job.device}
                     </td>
-                    <td className="px-7 py-5">
+                    <td className="px-4 sm:px-7 py-5">
                       <span
                         className={`px-3.5 py-1.5 rounded-full text-xs font-bold border ${
                           job.status === "Diagnosing"
@@ -347,10 +339,10 @@ export default function DashboardContent() {
                         {job.status}
                       </span>
                     </td>
-                    <td className="px-7 py-5 text-sm text-gray-500 font-medium">
+                    <td className="px-4 sm:px-7 py-5 text-sm text-gray-500 font-medium">
                       {job.time}
                     </td>
-                    <td className="px-7 py-5 text-center">
+                    <td className="px-4 sm:px-7 py-5 text-center">
                       <button
                         onClick={() => navigate("/job-orders")}
                         className="text-gray-400 hover:text-gray-900 bg-transparent hover:bg-gray-100 p-2 rounded-lg transition-all mx-auto block"

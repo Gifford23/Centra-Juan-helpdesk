@@ -221,11 +221,11 @@ export default function AdminLayout({
       ========================================== */}
       <aside
         className="fixed top-0 left-0 h-screen bg-blue-600 border-r border-blue-700 text-white z-50 
-                      w-20 hover:w-64 transition-all duration-300 ease-in-out group 
+                      w-16 sm:w-20 md:hover:w-64 transition-all duration-300 ease-in-out group 
                       overflow-hidden flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]"
       >
         {/* Logo Section */}
-        <div className="h-16 flex items-center px-6 border-b border-blue-700 whitespace-nowrap">
+        <div className="h-16 flex items-center px-4 sm:px-6 border-b border-blue-700 whitespace-nowrap">
           <img
             src={technician}
             alt="Technician"
@@ -322,17 +322,17 @@ export default function AdminLayout({
       {/* ==========================================
           MAIN CONTENT AREA 
       ========================================== */}
-      <div className="flex-1 ml-20 flex flex-col min-h-screen transition-all duration-300">
+      <div className="flex-1 ml-16 sm:ml-20 flex flex-col min-h-screen transition-all duration-300">
         {/* TOP NAVIGATION BAR (Glassmorphism Effect) */}
-        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-40 shadow-sm">
+        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-3 sm:px-5 lg:px-8 sticky top-0 z-40 shadow-sm">
           <div className="flex-1 flex items-center">
-            <span className="text-lg md:text-xl font-black text-gray-900 tracking-tight">
+            <span className="text-sm sm:text-base md:text-xl font-black text-gray-900 tracking-tight truncate">
               Central Juan Service Center.
             </span>
           </div>
 
           {/* Right Actions (Notifications & Profile) */}
-          <div className="flex items-center gap-5 ml-4">
+          <div className="flex items-center gap-2 sm:gap-4 ml-2 sm:ml-4">
             {/* Notification Bell */}
             <div className="relative">
               <button
@@ -349,7 +349,7 @@ export default function AdminLayout({
 
               {/* Notification Dropdown */}
               {showNotifications && (
-                <div className="absolute right-0 mt-3 w-80 bg-white border border-gray-100 shadow-xl shadow-gray-200/50 rounded-xl p-4 z-50 transform opacity-100 scale-100 transition-all">
+                <div className="absolute right-0 mt-3 w-[calc(100vw-5.5rem)] max-w-80 bg-white border border-gray-100 shadow-xl shadow-gray-200/50 rounded-xl p-4 z-50 transform opacity-100 scale-100 transition-all">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm font-bold text-gray-900">
                       Notifications
@@ -448,7 +448,7 @@ export default function AdminLayout({
         </header>
 
         {/* PAGE CONTENT RENDERS HERE */}
-        <main className="p-8 flex-1">{children}</main>
+        <main className="p-4 sm:p-6 lg:p-8 flex-1">{children}</main>
       </div>
     </div>
   );

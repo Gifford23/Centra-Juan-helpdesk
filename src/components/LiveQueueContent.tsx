@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import {
   Search,
   Filter,
-  Eye,
   Printer,
   Download,
   ChevronDown,
@@ -303,7 +302,7 @@ export default function LiveQueueContent() {
         </button>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col xl:flex-row gap-4 justify-between items-center">
+      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col xl:flex-row gap-4 justify-between items-stretch xl:items-center">
         <div className="relative w-full xl:max-w-md">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-gray-400" />
@@ -367,25 +366,25 @@ export default function LiveQueueContent() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse whitespace-nowrap">
+            <table className="w-full min-w-[880px] text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Job Order
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Customer
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Device
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Technician
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Status
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100 text-right">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
                     Actions
                   </th>
                 </tr>
@@ -396,13 +395,13 @@ export default function LiveQueueContent() {
                     key={job.id}
                     className="hover:bg-blue-50/30 transition-colors group"
                   >
-                    <td className="px-7 py-4">
+                    <td className="px-4 sm:px-7 py-4">
                       <p className="font-black text-gray-900">#{job.id}</p>
                       <p className="text-xs text-gray-500 font-medium mt-0.5">
                         {job.date}
                       </p>
                     </td>
-                    <td className="px-7 py-4">
+                    <td className="px-4 sm:px-7 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 flex items-center justify-center text-xs font-bold ring-1 ring-gray-200">
                           {getInitials(job.customer)}
@@ -412,24 +411,24 @@ export default function LiveQueueContent() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-7 py-4 text-sm text-gray-600 font-medium">
+                    <td className="px-4 sm:px-7 py-4 text-sm text-gray-600 font-medium">
                       {job.device}
                     </td>
-                    <td className="px-7 py-4">
+                    <td className="px-4 sm:px-7 py-4">
                       <span
                         className={`text-sm ${job.tech === "Unassigned" ? "text-gray-400 italic" : "text-gray-900 font-bold"}`}
                       >
                         {job.tech}
                       </span>
                     </td>
-                    <td className="px-7 py-4">
+                    <td className="px-4 sm:px-7 py-4">
                       <span
                         className={`px-3.5 py-1.5 rounded-full text-xs font-bold ${getStatusStyle(job.status)}`}
                       >
                         {job.status}
                       </span>
                     </td>
-                    <td className="px-7 py-4 text-right">
+                    <td className="px-4 sm:px-7 py-4 text-right">
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {/* UPDATE BUTTON */}
                         <button

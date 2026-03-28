@@ -215,7 +215,7 @@ export default function JobOrdersContent() {
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
+    <div className="min-h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
       {/* Page Header & View Toggle */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 flex-shrink-0">
         <div>
@@ -229,7 +229,7 @@ export default function JobOrdersContent() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           {/* View Toggle Buttons */}
           <div className="flex bg-gray-200/50 p-1 rounded-xl border border-gray-200 flex-1 sm:flex-none">
             <button
@@ -246,10 +246,10 @@ export default function JobOrdersContent() {
             </button>
           </div>
 
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <button
               onClick={() => setIsFilterOpen((prev) => !prev)}
-              className="flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm text-sm active:scale-95"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm text-sm active:scale-95"
             >
               <Filter className="w-4 h-4" />
               <span className="hidden sm:inline">{statusFilter}</span>
@@ -265,7 +265,7 @@ export default function JobOrdersContent() {
                   onClick={() => setIsFilterOpen(false)}
                   aria-label="Close filter menu"
                 />
-                <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-1">
+                <div className="absolute right-0 mt-2 w-full sm:w-52 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-1">
                   {statusOptions.map((option) => (
                     <button
                       key={option}
@@ -296,8 +296,8 @@ export default function JobOrdersContent() {
               VIEW 1: KANBAN BOARD
           ========================================== */}
           {viewMode === "board" && (
-            <div className="flex-1 overflow-x-auto pb-4">
-              <div className="flex gap-6 h-full min-w-[1000px]">
+            <div className="flex-1 overflow-x-auto pb-2 sm:pb-4 -mx-1 sm:mx-0">
+              <div className="flex gap-4 sm:gap-6 h-full min-w-[1000px] px-1 sm:px-0">
                 {/* COLUMN 1: RECEIVED */}
                 <div className="flex-1 flex flex-col bg-gray-50/50 rounded-2xl border border-gray-100 p-4">
                   <div className="flex items-center justify-between mb-4 px-1">
@@ -425,28 +425,28 @@ export default function JobOrdersContent() {
           {viewMode === "list" && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex-1 flex flex-col mb-4">
               <div className="overflow-x-auto flex-1">
-                <table className="w-full text-left border-collapse whitespace-nowrap">
+                <table className="w-full min-w-[880px] text-left border-collapse whitespace-nowrap">
                   <thead>
                     <tr className="text-xs uppercase tracking-wider border-b border-gray-200">
-                      <th className="px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
+                      <th className="px-4 sm:px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
                         Job Order
                       </th>
-                      <th className="px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
+                      <th className="px-4 sm:px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
                         Priority
                       </th>
-                      <th className="px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
+                      <th className="px-4 sm:px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
                         Device & Customer
                       </th>
-                      <th className="px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
+                      <th className="px-4 sm:px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
                         Status
                       </th>
-                      <th className="px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
+                      <th className="px-4 sm:px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
                         Assigned Tech
                       </th>
-                      <th className="px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
+                      <th className="px-4 sm:px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
                         Date Logged
                       </th>
-                      <th className="px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
+                      <th className="px-4 sm:px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
                         Actions
                       </th>
                     </tr>
@@ -570,28 +570,28 @@ function JobTableRow({
 
   return (
     <tr className="hover:bg-blue-50/30 transition-colors group relative">
-      <td className="px-7 py-5 font-black text-gray-900">#{job.id}</td>
-      <td className="px-7 py-5">
+      <td className="px-4 sm:px-7 py-5 font-black text-gray-900">#{job.id}</td>
+      <td className="px-4 sm:px-7 py-5">
         <span
           className={`text-[10px] font-bold px-2.5 py-1 rounded border uppercase tracking-wider ${job.priority === "High" ? "bg-red-50 text-red-600 border-red-200" : "bg-gray-50 text-gray-500 border-gray-200"}`}
         >
           {job.priority}
         </span>
       </td>
-      <td className="px-7 py-5">
+      <td className="px-4 sm:px-7 py-5">
         <p className="font-bold text-sm text-gray-900">{job.device}</p>
         <p className="text-xs font-medium text-gray-500 mt-0.5">
           {job.customer}
         </p>
       </td>
-      <td className="px-7 py-5">
+      <td className="px-4 sm:px-7 py-5">
         <span
           className={`px-3.5 py-1.5 rounded-full text-xs font-bold border ${getStatusBadge(job.currentStatus)}`}
         >
           {job.currentStatus}
         </span>
       </td>
-      <td className="px-7 py-5">
+      <td className="px-4 sm:px-7 py-5">
         <div className="flex items-center gap-2">
           {job.techInitials ? (
             <>
@@ -609,10 +609,10 @@ function JobTableRow({
           )}
         </div>
       </td>
-      <td className="px-7 py-5 text-sm font-medium text-gray-500">
+      <td className="px-4 sm:px-7 py-5 text-sm font-medium text-gray-500">
         {job.time}
       </td>
-      <td className="px-7 py-5 text-right">
+      <td className="px-4 sm:px-7 py-5 text-right">
         <ActionMenu
           job={job}
           technicians={technicians}

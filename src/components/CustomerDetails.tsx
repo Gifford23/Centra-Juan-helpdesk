@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
-  User,
   Phone,
   Mail,
   MapPin,
@@ -126,7 +125,9 @@ export default function CustomerDetails() {
             className="flex items-center gap-2 p-2.5 bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-colors shadow-sm"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm font-medium text-gray-700">Back</span>
+            <span className="text-sm font-medium text-gray-700 hidden sm:inline">
+              Back
+            </span>
           </button>
 
           <div>
@@ -201,7 +202,7 @@ export default function CustomerDetails() {
 
       {/* Bottom Section: Job Order History Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col mt-8">
-        <div className="px-7 py-6 border-b border-gray-100 flex items-center gap-3 bg-gray-50/50">
+        <div className="px-4 sm:px-7 py-6 border-b border-gray-100 flex items-center gap-3 bg-gray-50/50">
           <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
             <ClipboardList className="w-5 h-5" />
           </div>
@@ -222,14 +223,20 @@ export default function CustomerDetails() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full min-w-[920px] text-left border-collapse">
               <thead>
                 <tr className="bg-white text-xs uppercase tracking-wider text-gray-400 border-b border-gray-100">
-                  <th className="px-7 py-4 font-bold">Job Order / ID</th>
-                  <th className="px-7 py-4 font-bold">Date Logged</th>
-                  <th className="px-7 py-4 font-bold">Device Details</th>
-                  <th className="px-7 py-4 font-bold">Reported Issue</th>
-                  <th className="px-7 py-4 font-bold">Status</th>
+                  <th className="px-4 sm:px-7 py-4 font-bold">
+                    Job Order / ID
+                  </th>
+                  <th className="px-4 sm:px-7 py-4 font-bold">Date Logged</th>
+                  <th className="px-4 sm:px-7 py-4 font-bold">
+                    Device Details
+                  </th>
+                  <th className="px-4 sm:px-7 py-4 font-bold">
+                    Reported Issue
+                  </th>
+                  <th className="px-4 sm:px-7 py-4 font-bold">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -238,7 +245,7 @@ export default function CustomerDetails() {
                     key={job.job_order_no}
                     className="hover:bg-blue-50/30 transition-colors"
                   >
-                    <td className="px-7 py-5">
+                    <td className="px-4 sm:px-7 py-5">
                       <p className="font-bold text-gray-900">
                         #{job.job_order_no}
                       </p>
@@ -248,14 +255,14 @@ export default function CustomerDetails() {
                         </p>
                       )}
                     </td>
-                    <td className="px-7 py-5 text-sm font-medium text-gray-600">
+                    <td className="px-4 sm:px-7 py-5 text-sm font-medium text-gray-600">
                       {new Date(job.created_at).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
                       })}
                     </td>
-                    <td className="px-7 py-5">
+                    <td className="px-4 sm:px-7 py-5">
                       <p className="text-sm font-bold text-gray-800">
                         {job.brand} {job.model}
                       </p>
@@ -264,12 +271,12 @@ export default function CustomerDetails() {
                       </p>
                     </td>
                     <td
-                      className="px-7 py-5 max-w-xs truncate text-sm text-gray-600 font-medium"
+                      className="px-4 sm:px-7 py-5 max-w-xs truncate text-sm text-gray-600 font-medium"
                       title={job.complaint_notes}
                     >
                       {job.complaint_notes}
                     </td>
-                    <td className="px-7 py-5">
+                    <td className="px-4 sm:px-7 py-5">
                       <span
                         className={`px-3 py-1.5 rounded-full text-[11px] font-bold border whitespace-nowrap ${getStatusBadge(job.status)}`}
                       >

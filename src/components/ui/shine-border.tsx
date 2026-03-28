@@ -1,5 +1,3 @@
-import React from "react";
-
 export function ShineBorder() {
   return (
     <div className="absolute inset-0 rounded-2xl pointer-events-none overflow-hidden">

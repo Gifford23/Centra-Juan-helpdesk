@@ -170,7 +170,7 @@ export default function SubmitTicket() {
         backgroundImage: `url(${background})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        backgroundAttachment: "fixed",
+        backgroundAttachment: "scroll",
       }}
     >
       <div className="absolute inset-0 bg-blue-900/10"></div>
@@ -197,7 +197,7 @@ export default function SubmitTicket() {
         <div className="bg-white/95 backdrop-blur-xl rounded-[24px] shadow-2xl shadow-blue-900/10 overflow-hidden border border-white">
           {/* SUCCESS SCREEN */}
           {successTrackingId ? (
-            <div className="p-12 flex flex-col items-center text-center animate-in fade-in zoom-in-95">
+            <div className="p-6 sm:p-12 flex flex-col items-center text-center animate-in fade-in zoom-in-95">
               <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6">
                 <CheckCircle2 className="w-12 h-12" />
               </div>
@@ -227,7 +227,7 @@ export default function SubmitTicket() {
                 </button>
               </div>
 
-              <div className="flex gap-4 w-full max-w-sm">
+              <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
                 <Link
                   to="/track"
                   className="flex-1 bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-colors"

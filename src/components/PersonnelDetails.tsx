@@ -179,7 +179,7 @@ export default function PersonnelDetails() {
 
       {/* Bottom Section: Assigned Workload Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col mt-8">
-        <div className="px-7 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+        <div className="px-4 sm:px-7 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
               <ClipboardList className="w-5 h-5" />
@@ -204,14 +204,16 @@ export default function PersonnelDetails() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full min-w-[860px] text-left border-collapse">
               <thead>
                 <tr className="bg-white text-xs uppercase tracking-wider text-gray-400 border-b border-gray-100">
-                  <th className="px-7 py-4 font-bold">Job Order</th>
-                  <th className="px-7 py-4 font-bold">Date Logged</th>
-                  <th className="px-7 py-4 font-bold">Customer</th>
-                  <th className="px-7 py-4 font-bold">Device Details</th>
-                  <th className="px-7 py-4 font-bold">Status</th>
+                  <th className="px-4 sm:px-7 py-4 font-bold">Job Order</th>
+                  <th className="px-4 sm:px-7 py-4 font-bold">Date Logged</th>
+                  <th className="px-4 sm:px-7 py-4 font-bold">Customer</th>
+                  <th className="px-4 sm:px-7 py-4 font-bold">
+                    Device Details
+                  </th>
+                  <th className="px-4 sm:px-7 py-4 font-bold">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -220,20 +222,20 @@ export default function PersonnelDetails() {
                     key={job.job_order_no}
                     className="hover:bg-indigo-50/30 transition-colors"
                   >
-                    <td className="px-7 py-5 font-bold text-gray-900">
+                    <td className="px-4 sm:px-7 py-5 font-bold text-gray-900">
                       #{job.job_order_no}
                     </td>
-                    <td className="px-7 py-5 text-sm font-medium text-gray-600">
+                    <td className="px-4 sm:px-7 py-5 text-sm font-medium text-gray-600">
                       {new Date(job.created_at).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
                       })}
                     </td>
-                    <td className="px-7 py-5 text-sm font-bold text-gray-800">
+                    <td className="px-4 sm:px-7 py-5 text-sm font-bold text-gray-800">
                       {job.customers?.full_name || "Unknown"}
                     </td>
-                    <td className="px-7 py-5">
+                    <td className="px-4 sm:px-7 py-5">
                       <p className="text-sm font-bold text-gray-800">
                         {job.brand} {job.model}
                       </p>
@@ -244,7 +246,7 @@ export default function PersonnelDetails() {
                         {job.complaint_notes}
                       </p>
                     </td>
-                    <td className="px-7 py-5">
+                    <td className="px-4 sm:px-7 py-5">
                       <span
                         className={`px-3 py-1.5 rounded-full text-[11px] font-bold border whitespace-nowrap ${getStatusBadge(job.status)}`}
                       >

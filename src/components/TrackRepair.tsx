@@ -75,7 +75,7 @@ export default function TrackRepair() {
         backgroundSize: "cover",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
-        backgroundAttachment: "fixed",
+        backgroundAttachment: "scroll",
       }}
     >
       {/* ==========================================
@@ -152,7 +152,7 @@ export default function TrackRepair() {
           {isSearched && jobData && (
             <div className="border-t border-gray-100 bg-gray-50/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {/* Top Banner: Quick Summary */}
-              <div className="px-6 py-5 md:px-8 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white">
+              <div className="px-4 sm:px-6 py-5 md:px-8 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white">
                 <div>
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Official Tracking ID
@@ -170,7 +170,7 @@ export default function TrackRepair() {
                     </span>
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-2">
+                <div className="flex flex-col items-start md:items-end gap-2">
                   <div className="flex items-center gap-2 text-sm font-medium text-gray-700 bg-gray-100 px-3 py-1.5 rounded-lg w-fit">
                     <Laptop className="w-4 h-4 text-gray-500" />
                     {jobData.brand} {jobData.model}
@@ -191,7 +191,7 @@ export default function TrackRepair() {
               </div>
 
               {/* The Horizontal Progress Stepper */}
-              <div className="px-6 py-8 md:px-8">
+              <div className="px-4 sm:px-6 py-8 md:px-8">
                 <div className="relative flex items-center justify-between max-w-md mx-auto mb-10">
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-gray-200 rounded-full z-0"></div>
 

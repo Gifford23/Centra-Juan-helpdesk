@@ -5,7 +5,6 @@ import {
   Shield,
   Wrench,
   UserPlus,
-  MoreVertical,
   X,
   Mail,
   Lock,
@@ -183,7 +182,7 @@ export default function PersonnelContent() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
           {/* VIEW TOGGLE */}
           <div className="flex bg-gray-200/50 p-1 rounded-xl border border-gray-200 w-full sm:w-auto">
             <button
@@ -316,22 +315,22 @@ export default function PersonnelContent() {
           {viewMode === "table" && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse whitespace-nowrap">
+                <table className="w-full min-w-[960px] text-left border-collapse whitespace-nowrap">
                   <thead>
                     <tr>
-                      <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                      <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                         Employee Name
                       </th>
-                      <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                      <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                         Email Account
                       </th>
-                      <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                      <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                         System Role
                       </th>
-                      <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                      <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                         Status
                       </th>
-                      <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
+                      <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
                         Actions
                       </th>
                     </tr>
@@ -342,7 +341,7 @@ export default function PersonnelContent() {
                         key={person.id}
                         className="hover:bg-indigo-50/30 transition-colors group"
                       >
-                        <td className="px-7 py-5">
+                        <td className="px-4 sm:px-7 py-5">
                           <div className="flex items-center gap-4">
                             <div
                               className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ring-2 ring-white shadow-sm ${person.role === "Super Admin" ? "bg-gradient-to-tr from-indigo-600 to-indigo-400 text-white" : "bg-gradient-to-tr from-blue-500 to-blue-400 text-white"}`}
@@ -364,10 +363,10 @@ export default function PersonnelContent() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-7 py-5 text-sm text-gray-600 font-medium">
+                        <td className="px-4 sm:px-7 py-5 text-sm text-gray-600 font-medium">
                           {person.email}
                         </td>
-                        <td className="px-7 py-5">
+                        <td className="px-4 sm:px-7 py-5">
                           <div className="flex items-center gap-2">
                             {person.role === "Super Admin" ? (
                               <ShieldCheck className="w-4 h-4 text-indigo-600" />
@@ -381,14 +380,14 @@ export default function PersonnelContent() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-7 py-5">
+                        <td className="px-4 sm:px-7 py-5">
                           <span
                             className={`px-3.5 py-1.5 rounded-full text-xs font-bold border ${person.status === "Active" ? "bg-emerald-50 text-emerald-700 border-emerald-200/60" : "bg-red-50 text-red-600 border-red-200/60"}`}
                           >
                             {person.status}
                           </span>
                         </td>
-                        <td className="px-7 py-5 text-right">
+                        <td className="px-4 sm:px-7 py-5 text-right">
                           <div className="flex justify-end items-center gap-2 opacity-100 transition-opacity">
                             <button
                               onClick={() =>

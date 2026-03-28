@@ -140,7 +140,7 @@ export default function SystemLogsContent() {
         </div>
         <button
           onClick={handleTestLog}
-          className="flex items-center gap-2 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm text-sm active:scale-95"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm text-sm active:scale-95"
         >
           <Activity className="w-4 h-4" /> Generate Test Log
         </button>
@@ -213,22 +213,22 @@ export default function SystemLogsContent() {
           </div>
         ) : (
           <div className="overflow-x-auto overflow-y-auto max-h-[560px]">
-            <table className="w-full text-left border-collapse whitespace-nowrap">
+            <table className="w-full min-w-[900px] text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
                     Date & Time
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
                     User
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
                     Action
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100 w-full">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100 w-full">
                     Details
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100 text-right">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100 text-right">
                     Actions
                   </th>
                 </tr>
@@ -239,7 +239,7 @@ export default function SystemLogsContent() {
                     key={log.id}
                     className="hover:bg-blue-50/30 transition-colors group"
                   >
-                    <td className="px-7 py-4">
+                    <td className="px-4 sm:px-7 py-4">
                       <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
                         <Calendar className="w-4 h-4 text-gray-400" />
                         {new Date(log.created_at).toLocaleString("en-US", {
@@ -250,21 +250,21 @@ export default function SystemLogsContent() {
                         })}
                       </div>
                     </td>
-                    <td className="px-7 py-4">
+                    <td className="px-4 sm:px-7 py-4">
                       <div className="flex items-center gap-2 text-sm font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg w-fit">
                         <User className="w-4 h-4" />
                         {log.user_name}
                       </div>
                     </td>
-                    <td className="px-7 py-4">
+                    <td className="px-4 sm:px-7 py-4">
                       <span className="text-sm font-bold text-gray-900">
                         {log.action}
                       </span>
                     </td>
-                    <td className="px-7 py-4 text-sm text-gray-500 font-medium truncate max-w-md">
+                    <td className="px-4 sm:px-7 py-4 text-sm text-gray-500 font-medium truncate max-w-md">
                       {log.details || "-"}
                     </td>
-                    <td className="px-7 py-4 text-right">
+                    <td className="px-4 sm:px-7 py-4 text-right">
                       <button
                         onClick={() => setLogToDelete(log.id)}
                         className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"

@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Loader2, X, AlertCircle, CheckCircle2, Copy } from "lucide-react";
+import {
+  Loader2,
+  X,
+  AlertCircle,
+  CheckCircle2,
+  Copy,
+  ChevronDown,
+} from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { logSystemAction } from "../utils/auditLog";
 
@@ -111,7 +118,7 @@ export default function CreateJobModal({
       <div className="relative w-full max-w-3xl bg-white rounded-[24px] shadow-2xl border border-gray-100 flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-300">
         {/* SUCCESS SCREEN */}
         {successTrackingId ? (
-          <div className="p-12 flex flex-col items-center justify-center text-center bg-white h-full">
+          <div className="p-6 sm:p-12 flex flex-col items-center justify-center text-center bg-white h-full">
             <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6">
               <CheckCircle2 className="w-10 h-10" />
             </div>
@@ -148,7 +155,7 @@ export default function CreateJobModal({
         ) : (
           <>
             {/* Standard Modal Header */}
-            <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 bg-white">
+            <div className="flex items-center justify-between px-4 sm:px-8 py-5 border-b border-gray-100 bg-white">
               <div>
                 <h2 className="text-xl font-black text-gray-900 tracking-tight uppercase">
                   Official Job Order
@@ -180,7 +187,7 @@ export default function CreateJobModal({
             {/* Standard Modal Body */}
             <form
               id="create-job-form"
-              className="flex-1 overflow-y-auto p-8 space-y-8 bg-gray-50/30"
+              className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 bg-gray-50/30"
               onSubmit={handleSubmit}
             >
               {errorMessage && (
@@ -286,17 +293,24 @@ export default function CreateJobModal({
                   Nature of Complaint
                 </h3>
                 <div className="space-y-5">
-                  <select
-                    name="issueCategory"
-                    required
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium shadow-sm appearance-none cursor-pointer"
-                  >
-                    <option value="">Primary Issue Category *</option>
-                    <option value="Hardware">Hardware / Physical Damage</option>
-                    <option value="Software">Software / OS / Virus</option>
-                    <option value="No Power">No Power / Boot Issue</option>
-                    <option value="Upgrade">Upgrades / Installation</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      name="issueCategory"
+                      required
+                      className="w-full px-4 pr-10 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium shadow-sm appearance-none cursor-pointer"
+                    >
+                      <option value="">Primary Issue Category *</option>
+                      <option value="Hardware">
+                        Hardware / Physical Damage
+                      </option>
+                      <option value="Software">Software / OS / Virus</option>
+                      <option value="No Power">No Power / Boot Issue</option>
+                      <option value="Upgrade">Upgrades / Installation</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    </div>
+                  </div>
                   <textarea
                     name="complaint"
                     rows={3}
@@ -352,12 +366,12 @@ export default function CreateJobModal({
               </div>
             </form>
 
-            <div className="px-8 py-5 border-t border-gray-100 bg-white flex justify-end gap-3">
+            <div className="px-4 sm:px-8 py-5 border-t border-gray-100 bg-white flex flex-col-reverse sm:flex-row justify-end gap-3">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="px-6 py-3 text-sm font-bold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors active:scale-95"
+                className="w-full sm:w-auto px-6 py-3 text-sm font-bold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors active:scale-95"
               >
                 Cancel
               </button>
@@ -365,7 +379,7 @@ export default function CreateJobModal({
                 type="submit"
                 form="create-job-form"
                 disabled={isSubmitting}
-                className="px-6 py-3 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20 flex items-center gap-2 active:scale-95"
+                className="w-full sm:w-auto px-6 py-3 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 active:scale-95"
               >
                 Submit
               </button>

@@ -151,7 +151,7 @@ export default function CustomersContent() {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Page Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             Customer Directory
@@ -165,7 +165,7 @@ export default function CustomersContent() {
             setFormError("");
             setIsAddModalOpen(true);
           }}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md shadow-blue-600/20 text-sm active:scale-95"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md shadow-blue-600/20 text-sm active:scale-95"
         >
           <UserPlus className="w-5 h-5" /> Add Customer
         </button>
@@ -229,25 +229,25 @@ export default function CustomersContent() {
           </div>
         ) : (
           <div className="overflow-x-auto overflow-y-auto max-h-[560px]">
-            <table className="w-full text-left border-collapse whitespace-nowrap">
+            <table className="w-full min-w-[980px] text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Client Name
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Contact Info
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Address
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-center">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-center">
                     Total Repairs
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Last Visit
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
                     Profile
                   </th>
                 </tr>
@@ -259,7 +259,7 @@ export default function CustomersContent() {
                     className="hover:bg-blue-50/30 transition-colors group"
                   >
                     {/* Name & ID */}
-                    <td className="px-7 py-5">
+                    <td className="px-4 sm:px-7 py-5">
                       <p className="font-bold text-gray-900">{customer.name}</p>
                       <p className="text-xs text-gray-500 font-medium mt-0.5">
                         ID: {customer.shortId}
@@ -267,7 +267,7 @@ export default function CustomersContent() {
                     </td>
 
                     {/* Contact Info (Stacked) */}
-                    <td className="px-7 py-5">
+                    <td className="px-4 sm:px-7 py-5">
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
                           <Phone className="w-4 h-4 text-gray-400" />
@@ -281,7 +281,7 @@ export default function CustomersContent() {
                     </td>
 
                     {/* Address */}
-                    <td className="px-7 py-5">
+                    <td className="px-4 sm:px-7 py-5">
                       <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
                         <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         <span className="truncate max-w-[200px]">
@@ -291,19 +291,19 @@ export default function CustomersContent() {
                     </td>
 
                     {/* Total Repairs Badge */}
-                    <td className="px-7 py-5 text-center">
+                    <td className="px-4 sm:px-7 py-5 text-center">
                       <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 border border-blue-100 text-blue-700 font-bold text-sm">
                         {customer.repairs}
                       </span>
                     </td>
 
                     {/* Last Visit */}
-                    <td className="px-7 py-5 text-sm font-medium text-gray-500">
+                    <td className="px-4 sm:px-7 py-5 text-sm font-medium text-gray-500">
                       {customer.lastVisit}
                     </td>
 
                     {/* Actions */}
-                    <td className="px-7 py-5 text-right">
+                    <td className="px-4 sm:px-7 py-5 text-right">
                       {/* --- WIRED UP NAVIGATION BUTTON --- */}
                       <button
                         onClick={() => navigate(`/customers/${customer.id}`)}

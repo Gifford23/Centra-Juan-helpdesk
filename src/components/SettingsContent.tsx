@@ -186,7 +186,7 @@ export default function SettingsContent() {
         </p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2 inline-flex gap-2">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2 flex flex-wrap gap-2 w-full sm:w-fit">
         <button
           type="button"
           onClick={() => setActiveTab("account")}
@@ -216,7 +216,7 @@ export default function SettingsContent() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* LEFT COLUMN: Profile Summary Card */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center sticky top-24">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center lg:sticky lg:top-24">
             <div
               className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center font-black text-4xl shadow-lg mb-4 text-white ${savedUser.role === "Super Admin" ? "bg-gradient-to-tr from-indigo-600 to-indigo-400 shadow-indigo-500/20" : "bg-gradient-to-tr from-blue-600 to-blue-400 shadow-blue-500/20"}`}
             >
@@ -375,7 +375,7 @@ export default function SettingsContent() {
                 </div>
 
                 <div className="p-6 space-y-6">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
                     <div className="flex gap-4">
                       <div
                         className={`p-2.5 rounded-lg flex-shrink-0 h-fit ${allowPublicTickets ? "bg-blue-100 text-blue-600" : "bg-gray-200 text-gray-500"}`}
@@ -393,7 +393,7 @@ export default function SettingsContent() {
                       </div>
                     </div>
 
-                    <label className="relative inline-flex items-center cursor-pointer ml-4 flex-shrink-0">
+                    <label className="relative inline-flex items-center cursor-pointer sm:ml-4 flex-shrink-0 self-end sm:self-auto">
                       <input
                         type="checkbox"
                         className="sr-only peer"
