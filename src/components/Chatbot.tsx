@@ -1,15 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import {
-  MessageSquare,
-  X,
-  Phone,
-  Mail,
-  Globe,
-  MapPin,
-  ExternalLink,
-  Bot,
-} from "lucide-react";
+import { X, Phone, Mail, Globe, MapPin, ExternalLink, Bot } from "lucide-react";
+import botIcon from "../assets/icons/bot.png";
 
 type Message = {
   id: number;
@@ -167,13 +159,13 @@ export default function Chatbot() {
         className={`fixed bottom-6 right-6 p-4 rounded-full shadow-2xl z-50 transition-all duration-300 hover:scale-110 ${
           isOpen
             ? "bg-gray-800 text-white rotate-90"
-            : "bg-blue-600 text-white hover:bg-blue-700"
+            : "bg-blue-400 text-white hover:bg-blue-300"
         }`}
       >
         {isOpen ? (
           <X className="w-6 h-6" />
         ) : (
-          <MessageSquare className="w-6 h-6" />
+          <img src={botIcon} alt="Bot" className="w-9 h-9" />
         )}
       </button>
 

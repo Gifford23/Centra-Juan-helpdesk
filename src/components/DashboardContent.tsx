@@ -7,6 +7,19 @@ import warningIcon from "../assets/icons/warning.png";
 import tools from "../assets/icons/tools.png";
 import pending from "../assets/icons/pending.gif";
 import { supabase } from "../lib/supabase";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 
 export default function DashboardContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,6 +39,18 @@ export default function DashboardContent() {
     active: 0,
     ready: 0,
   });
+
+  // Chart States
+  const [barChartData, setBarChartData] = useState<any[]>([]);
+  const [pieChartData, setPieChartData] = useState<any[]>([]);
+  const PIE_COLORS = [
+    "#4f46e5",
+    "#3b82f6",
+    "#0ea5e9",
+    "#38bdf8",
+    "#7dd3fc",
+    "#bae6fd",
+  ];
 
   const currentHour = new Date().getHours();
   const greeting =
@@ -57,7 +82,8 @@ export default function DashboardContent() {
           brand,
           model,
           assigned_tech,
-          status
+          status,
+          issue_category
         `,
         )
         .order("created_at", { ascending: false });
@@ -113,7 +139,49 @@ export default function DashboardContent() {
           active: activeCount,
           ready: readyCount,
         });
-        setActiveWorkload(formattedData.slice(0, 5)); // Only show the 5 most recent
+        setActiveWorkload(formattedData.slice(0, 5)); // Only show the 5 most recent in the table
+
+        // --- PIE CHART: Top Issue Categories ---
+        const issuesMap: Record<string, number> = {};
+        data.forEach((job) => {
+          const category = job.issue_category || "Other";
+          issuesMap[category] = (issuesMap[category] || 0) + 1;
+        });
+
+        const formattedPieData = Object.keys(issuesMap)
+          .map((key) => ({
+            name: key,
+            value: issuesMap[key],
+          }))
+          .sort((a, b) => b.value - a.value); // Sort highest to lowest
+        setPieChartData(formattedPieData);
+
+        // --- BAR CHART: Repairs Over Time (Last 7 Days) ---
+        const last7Days = [...Array(7)]
+          .map((_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            return d;
+          })
+          .reverse();
+
+        const formattedBarData = last7Days.map((date) => {
+          const dateString = date.toISOString().split("T")[0]; // YYYY-MM-DD
+          const displayString = date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          }); // MMM DD
+
+          const count = data.filter((j) =>
+            j.created_at.startsWith(dateString),
+          ).length;
+
+          return {
+            date: displayString,
+            Tickets: count,
+          };
+        });
+        setBarChartData(formattedBarData);
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -239,7 +307,119 @@ export default function DashboardContent() {
       </div>
 
       {/* ==========================================
-          MIDDLE SECTION: ACTIVE WORKLOAD TABLE
+          MIDDLE ROW: ANALYTICS CHARTS
+      ========================================== */}
+      {!isLoading && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Bar Chart: Last 7 Days */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 lg:col-span-2">
+            <div className="mb-6">
+              <h3 className="text-lg font-bold text-gray-900">Ticket Volume</h3>
+              <p className="text-sm text-gray-500 font-medium">
+                Number of repair tickets received over the last 7 days.
+              </p>
+            </div>
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={barChartData}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="#f3f4f6"
+                  />
+                  <XAxis
+                    dataKey="date"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: "#6b7280" }}
+                    dy={10}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: "#6b7280" }}
+                  />
+                  <RechartsTooltip
+                    cursor={{ fill: "#f8fafc" }}
+                    contentStyle={{
+                      borderRadius: "12px",
+                      border: "none",
+                      boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                    }}
+                  />
+                  <Bar
+                    dataKey="Tickets"
+                    fill="#3b82f6"
+                    radius={[6, 6, 0, 0]}
+                    maxBarSize={50}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Pie Chart: Issue Categories */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 lg:col-span-1 flex flex-col">
+            <div className="mb-2">
+              <h3 className="text-lg font-bold text-gray-900">
+                Top Device Issues
+              </h3>
+              <p className="text-sm text-gray-500 font-medium">
+                Breakdown by complaint category.
+              </p>
+            </div>
+            <div className="flex-1 h-[250px] w-full flex items-center justify-center">
+              {pieChartData.length === 0 ? (
+                <p className="text-gray-400 font-medium text-sm">
+                  No issue data available yet.
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieChartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {pieChartData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={PIE_COLORS[index % PIE_COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "none",
+                        boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                      }}
+                    />
+                    <Legend
+                      verticalAlign="bottom"
+                      height={36}
+                      iconType="circle"
+                      wrapperStyle={{ fontSize: "12px", paddingTop: "20px" }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==========================================
+          BOTTOM SECTION: ACTIVE WORKLOAD TABLE
       ========================================== */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col min-h-[300px]">
         <div className="px-4 sm:px-7 py-5 sm:py-6 border-b border-gray-100 flex justify-between items-center bg-white">
