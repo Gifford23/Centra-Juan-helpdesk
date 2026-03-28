@@ -119,20 +119,24 @@ export default function CustomerDetails() {
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto">
       {/* Header & Back Button */}
-      <div className="flex items-center gap-4 mb-8">
-        <button
-          onClick={() => navigate("/customers")}
-          className="p-2.5 bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-colors shadow-sm"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
-            Customer Profile
-          </h1>
-          <p className="text-gray-500 text-sm mt-1 font-medium">
-            View client details and complete repair history
-          </p>
+      <div className="flex items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate("/customers")}
+            className="flex items-center gap-2 p-2.5 bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-colors shadow-sm"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="text-sm font-medium text-gray-700">Back</span>
+          </button>
+
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
+              Customer Profile
+            </h1>
+            <p className="text-gray-500 text-sm mt-1 font-medium">
+              View client details and complete repair history
+            </p>
+          </div>
         </div>
       </div>
 

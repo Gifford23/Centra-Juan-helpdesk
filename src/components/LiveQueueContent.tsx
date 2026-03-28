@@ -295,22 +295,22 @@ export default function LiveQueueContent() {
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Job Order
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Customer
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Device
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Technician
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Status
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100 text-right">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
                     Actions
                   </th>
                 </tr>
@@ -355,7 +355,7 @@ export default function LiveQueueContent() {
                       </span>
                     </td>
                     <td className="px-7 py-4 text-right">
-                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-end gap-1 opacity-100 transition-opacity">
                         {/* UPDATE BUTTON: Visible to everyone */}
                         <button
                           onClick={() => setJobToEdit(job)}

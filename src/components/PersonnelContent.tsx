@@ -14,12 +14,15 @@ import {
   Edit,
   Trash2,
   AlertTriangle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 export default function PersonnelContent() {
   const [staff, setStaff] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
 
   // GET LOGGED IN USER (To prevent self-deletion)
   const savedUser = JSON.parse(
@@ -206,19 +209,19 @@ export default function PersonnelContent() {
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Employee Name
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Email Account
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     System Role
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Status
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100 text-right">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
                     Actions
                   </th>
                 </tr>
@@ -286,7 +289,7 @@ export default function PersonnelContent() {
 
                     {/* Actions: Edit & Delete */}
                     <td className="px-7 py-5 text-right">
-                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-end gap-1 opacity-100 transition-opacity">
                         <button
                           onClick={() => setPersonToEdit(person)}
                           className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors tooltip"
@@ -398,12 +401,26 @@ export default function PersonnelContent() {
                   <div className="relative">
                     <Lock className="w-5 h-5 text-gray-400 absolute left-3.5 top-3.5" />
                     <input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       name="password"
                       required
-                      className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none transition-all text-sm font-medium shadow-sm"
+                      className="w-full pl-11 pr-11 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none transition-all text-sm font-medium shadow-sm"
                       placeholder="••••••••"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((s) => !s)}
+                      className="absolute right-3.5 top-3.5 p-1 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
                   </div>
                 </div>
 

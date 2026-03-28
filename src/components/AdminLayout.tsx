@@ -40,18 +40,18 @@ export default function AdminLayout({
           LEFT SIDEBAR (Collapse/Expand on Hover)
       ========================================== */}
       <aside
-        className="fixed top-0 left-0 h-screen bg-white border-r border-gray-200 z-50 
+        className="fixed top-0 left-0 h-screen bg-blue-600 border-r border-blue-700 text-white z-50 
                       w-20 hover:w-64 transition-all duration-300 ease-in-out group 
                       overflow-hidden flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]"
       >
         {/* Logo Section */}
-        <div className="h-16 flex items-center px-6 border-b border-gray-100 whitespace-nowrap">
+        <div className="h-16 flex items-center px-6 border-b border-blue-700 whitespace-nowrap">
           <img
             src={technician}
             alt="Technician"
             className="w-8 h-8 flex-shrink-0 object-cover drop-shadow-sm"
           />
-          <span className="ml-4 font-black text-xl text-gray-900 tracking-tight opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <span className="ml-4 font-black text-xl text-white tracking-tight opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             Help Desk
           </span>
         </div>
@@ -60,7 +60,7 @@ export default function AdminLayout({
         <nav className="flex-1 py-6 flex flex-col gap-1.5 px-3 overflow-y-auto">
           <Link
             to="/"
-            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50"}`}
+            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
           >
             <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -70,7 +70,7 @@ export default function AdminLayout({
 
           <Link
             to="/job-orders"
-            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/job-orders" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50"}`}
+            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/job-orders" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
           >
             <ClipboardList className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -80,7 +80,7 @@ export default function AdminLayout({
 
           <Link
             to="/queue"
-            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/queue" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50"}`}
+            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/queue" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
           >
             <Tickets className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -90,7 +90,7 @@ export default function AdminLayout({
 
           <Link
             to="/customers"
-            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/customers" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50"}`}
+            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/customers" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
           >
             <Users className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -102,7 +102,7 @@ export default function AdminLayout({
           {isSuperAdmin && (
             <Link
               to="/personnel"
-              className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/personnel" ? "bg-indigo-50 text-indigo-700" : "text-gray-600 hover:bg-gray-50"}`}
+              className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/personnel" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
             >
               <ShieldCheck className="w-5 h-5 flex-shrink-0" />
               <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -113,8 +113,8 @@ export default function AdminLayout({
         </nav>
 
         {/* Bottom Actions (Settings & Sign Out) */}
-        <div className="p-3 border-t border-gray-100 flex flex-col gap-1.5 bg-gray-50/50">
-          <button className="w-full flex items-center px-3 py-2.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-all whitespace-nowrap font-medium">
+        <div className="p-3 border-t border-blue-700 flex flex-col gap-1.5 bg-blue-600/40">
+          <button className="w-full flex items-center px-3 py-2.5 text-white hover:bg-blue-700/10 hover:text-white rounded-lg transition-all whitespace-nowrap font-medium">
             <Settings className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Settings

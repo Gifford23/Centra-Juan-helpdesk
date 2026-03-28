@@ -11,6 +11,7 @@ import {
   AlertCircle,
   UserPlus,
   ChevronLeft,
+  ChevronDown,
   User,
   LayoutGrid,
   List,
@@ -32,6 +33,8 @@ interface JobCardData {
 export default function JobOrdersContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [technicians, setTechnicians] = useState<string[]>([]);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("All");
 
   // 1. GET LOGGED IN USER FOR RBAC
   const savedUser = JSON.parse(
@@ -169,6 +172,47 @@ export default function JobOrdersContent() {
     }
   };
 
+  const statusOptions = [
+    "All",
+    "Pending Drop-off",
+    "Received",
+    "Diagnosing",
+    "Waiting on Parts",
+    "In Progress",
+    "Ready for Pickup",
+    "Ready",
+  ];
+
+  const filteredJobs =
+    statusFilter === "All"
+      ? allJobs
+      : allJobs.filter((job) => job.currentStatus === statusFilter);
+
+  const filteredBoardData = {
+    received:
+      statusFilter === "All"
+        ? boardData.received
+        : boardData.received.filter(
+            (job) => job.currentStatus === statusFilter,
+          ),
+    diagnosing:
+      statusFilter === "All"
+        ? boardData.diagnosing
+        : boardData.diagnosing.filter(
+            (job) => job.currentStatus === statusFilter,
+          ),
+    inProgress:
+      statusFilter === "All"
+        ? boardData.inProgress
+        : boardData.inProgress.filter(
+            (job) => job.currentStatus === statusFilter,
+          ),
+    ready:
+      statusFilter === "All"
+        ? boardData.ready
+        : boardData.ready.filter((job) => job.currentStatus === statusFilter),
+  };
+
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
       {/* Page Header & View Toggle */}
@@ -201,10 +245,42 @@ export default function JobOrdersContent() {
             </button>
           </div>
 
-          <button className="flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm text-sm active:scale-95">
-            <Filter className="w-4 h-4" />{" "}
-            <span className="hidden sm:inline">Filter</span>
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              className="flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm text-sm active:scale-95"
+            >
+              <Filter className="w-4 h-4" />
+              <span className="hidden sm:inline">{statusFilter}</span>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${isFilterOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {isFilterOpen && (
+              <>
+                <button
+                  className="fixed inset-0 z-10"
+                  onClick={() => setIsFilterOpen(false)}
+                  aria-label="Close filter menu"
+                />
+                <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-1">
+                  {statusOptions.map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => {
+                        setStatusFilter(option);
+                        setIsFilterOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2 text-sm font-medium transition-colors ${statusFilter === option ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"}`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -228,7 +304,7 @@ export default function JobOrdersContent() {
                       <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></div>
                       <h3 className="font-bold text-gray-900">Received</h3>
                       <span className="bg-gray-200 text-gray-600 text-xs font-bold px-2 py-0.5 rounded-full">
-                        {boardData.received.length}
+                        {filteredBoardData.received.length}
                       </span>
                     </div>
                     <button className="text-gray-400 hover:text-gray-900 transition-colors">
@@ -236,7 +312,7 @@ export default function JobOrdersContent() {
                     </button>
                   </div>
                   <div className="flex-1 overflow-y-auto space-y-3 pr-1 pb-20">
-                    {boardData.received.map((job) => (
+                    {filteredBoardData.received.map((job) => (
                       <KanbanCard
                         key={job.id}
                         job={job}
@@ -261,7 +337,7 @@ export default function JobOrdersContent() {
                       <div className="w-2.5 h-2.5 rounded-full bg-purple-500 shadow-sm shadow-purple-500/50"></div>
                       <h3 className="font-bold text-gray-900">Diagnosing</h3>
                       <span className="bg-gray-200 text-gray-600 text-xs font-bold px-2 py-0.5 rounded-full">
-                        {boardData.diagnosing.length}
+                        {filteredBoardData.diagnosing.length}
                       </span>
                     </div>
                     <button className="text-gray-400 hover:text-gray-900 transition-colors">
@@ -269,7 +345,7 @@ export default function JobOrdersContent() {
                     </button>
                   </div>
                   <div className="flex-1 overflow-y-auto space-y-3 pr-1 pb-20">
-                    {boardData.diagnosing.map((job) => (
+                    {filteredBoardData.diagnosing.map((job) => (
                       <KanbanCard
                         key={job.id}
                         job={job}
@@ -288,7 +364,7 @@ export default function JobOrdersContent() {
                       <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50"></div>
                       <h3 className="font-bold text-gray-900">In Repair</h3>
                       <span className="bg-gray-200 text-gray-600 text-xs font-bold px-2 py-0.5 rounded-full">
-                        {boardData.inProgress.length}
+                        {filteredBoardData.inProgress.length}
                       </span>
                     </div>
                     <button className="text-gray-400 hover:text-gray-900 transition-colors">
@@ -296,7 +372,7 @@ export default function JobOrdersContent() {
                     </button>
                   </div>
                   <div className="flex-1 overflow-y-auto space-y-3 pr-1 pb-20">
-                    {boardData.inProgress.map((job) => (
+                    {filteredBoardData.inProgress.map((job) => (
                       <KanbanCard
                         key={job.id}
                         job={job}
@@ -315,7 +391,7 @@ export default function JobOrdersContent() {
                       <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></div>
                       <h3 className="font-bold text-gray-900">Ready</h3>
                       <span className="bg-gray-200 text-gray-600 text-xs font-bold px-2 py-0.5 rounded-full">
-                        {boardData.ready.length}
+                        {filteredBoardData.ready.length}
                       </span>
                     </div>
                     <button className="text-gray-400 hover:text-gray-900 transition-colors">
@@ -323,7 +399,7 @@ export default function JobOrdersContent() {
                     </button>
                   </div>
                   <div className="flex-1 overflow-y-auto space-y-3 pr-1 pb-20">
-                    {boardData.ready.map((job) => (
+                    {filteredBoardData.ready.map((job) => (
                       <KanbanCard
                         key={job.id}
                         job={job}
@@ -346,20 +422,32 @@ export default function JobOrdersContent() {
               <div className="overflow-x-auto flex-1">
                 <table className="w-full text-left border-collapse whitespace-nowrap">
                   <thead>
-                    <tr className="bg-gray-50/80 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-100">
-                      <th className="px-7 py-4 font-bold">Job Order</th>
-                      <th className="px-7 py-4 font-bold">Priority</th>
-                      <th className="px-7 py-4 font-bold">Device & Customer</th>
-                      <th className="px-7 py-4 font-bold">Status</th>
-                      <th className="px-7 py-4 font-bold">Assigned Tech</th>
-                      <th className="px-7 py-4 font-bold">Date Logged</th>
-                      <th className="px-7 py-4 font-bold text-right">
+                    <tr className="text-xs uppercase tracking-wider border-b border-gray-200">
+                      <th className="px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
+                        Job Order
+                      </th>
+                      <th className="px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
+                        Priority
+                      </th>
+                      <th className="px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
+                        Device & Customer
+                      </th>
+                      <th className="px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
+                        Status
+                      </th>
+                      <th className="px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
+                        Assigned Tech
+                      </th>
+                      <th className="px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
+                        Date Logged
+                      </th>
+                      <th className="px-7 py-4 font-bold text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
                         Actions
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {allJobs.map((job) => (
+                    {filteredJobs.map((job) => (
                       <JobTableRow
                         key={job.id}
                         job={job}
@@ -583,7 +671,7 @@ function ActionMenu({
       )}
       <button
         onClick={toggleMenu}
-        className={`p-1.5 rounded-lg transition-colors ${isMenuOpen ? "bg-blue-50 text-blue-600" : "text-gray-400 hover:text-gray-900 hover:bg-gray-100 opacity-0 group-hover:opacity-100"}`}
+        className={`p-1.5 rounded-lg transition-colors ${isMenuOpen ? "bg-blue-50 text-blue-600" : "text-gray-400 hover:text-gray-900 hover:bg-gray-100"}`}
       >
         <MoreHorizontal className="w-5 h-5" />
       </button>

@@ -1,6 +1,15 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import CreateJobModal from "./CreateJobModal";
-import { MoreVertical, Plus, Loader2 } from "lucide-react";
+import {
+  MoreVertical,
+  Plus,
+  Loader2,
+  Sunrise,
+  Sun,
+  Moon,
+  Eye,
+} from "lucide-react";
 import checkIcon from "../assets/icons/check.png";
 import warningIcon from "../assets/icons/warning.png";
 import tools from "../assets/icons/tools.png";
@@ -10,6 +19,7 @@ import { supabase } from "../lib/supabase";
 export default function DashboardContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   // Read the logged-in user to determine access level
   const savedUser = JSON.parse(
@@ -24,6 +34,17 @@ export default function DashboardContent() {
     active: 0,
     ready: 0,
   });
+
+  const currentHour = new Date().getHours();
+  const greeting =
+    currentHour < 12
+      ? "Good morning"
+      : currentHour < 18
+        ? "Good afternoon"
+        : "Good evening";
+  const GreetingIcon =
+    currentHour < 12 ? Sunrise : currentHour < 18 ? Sun : Moon;
+  const firstName = savedUser?.full_name?.split(" ")?.[0] || "";
 
   // Fetch Data when the component loads
   useEffect(() => {
@@ -116,12 +137,18 @@ export default function DashboardContent() {
       ========================================== */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5">
+            <GreetingIcon className="w-4 h-4 text-blue-600" />
+            <span className="text-xs sm:text-sm font-bold text-blue-700">
+              {firstName ? `${greeting}, ${firstName}` : greeting}
+            </span>
+          </div>
+          <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
             Dashboard Overview
           </h1>
           <p className="text-gray-500 text-sm mt-1 font-medium">
             {isSuperAdmin
-              ? "Central Juan C.M. Recto Branch - Live Status"
+              ? "Central Juan C.M. Recto Branch"
               : `Welcome back, ${savedUser?.full_name} - Your Assigned Tasks`}
           </p>
         </div>
@@ -252,22 +279,22 @@ export default function DashboardContent() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-white bg-blue-600 border-b border-blue-700">
                     Job Order
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-white bg-blue-600 border-b border-blue-700">
                     Assigned Tech
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-white bg-blue-600 border-b border-blue-700">
                     Device
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-white bg-blue-600 border-b border-blue-700">
                     Current Status
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-white bg-blue-600 border-b border-blue-700">
                     Date Logged
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100 text-center">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-white bg-blue-600 border-b border-blue-700 text-center">
                     Action
                   </th>
                 </tr>
@@ -324,8 +351,12 @@ export default function DashboardContent() {
                       {job.time}
                     </td>
                     <td className="px-7 py-5 text-center">
-                      <button className="text-gray-400 hover:text-gray-900 bg-transparent hover:bg-gray-100 p-2 rounded-lg transition-all mx-auto block opacity-0 group-hover:opacity-100">
-                        <MoreVertical className="w-5 h-5" />
+                      <button
+                        onClick={() => navigate("/job-orders")}
+                        className="text-gray-400 hover:text-gray-900 bg-transparent hover:bg-gray-100 p-2 rounded-lg transition-all mx-auto block"
+                        title="View Job Orders"
+                      >
+                        <Eye className="w-5 h-5" />
                       </button>
                     </td>
                   </tr>
