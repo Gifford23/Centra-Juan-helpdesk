@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Chatbot from "./Chatbot";
 import {
   Search,
   CheckCircle2,
@@ -96,7 +97,6 @@ export default function TrackRepair() {
           status at Central Juan.
         </p>
       </div>
-
       {/* ==========================================
           SEARCH CONTAINER (Elevated Card)
       ========================================== */}
@@ -321,6 +321,7 @@ export default function TrackRepair() {
           )}
         </div>
       </div>
+      <Chatbot /> {/* ADD IT HERE */}
     </div>
   );
 }

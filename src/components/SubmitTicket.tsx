@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import Chatbot from "./Chatbot";
 import {
   Loader2,
   CheckCircle2,
@@ -173,7 +174,6 @@ export default function SubmitTicket() {
       }}
     >
       <div className="absolute inset-0 bg-blue-900/10"></div>
-
       <div className="relative z-10 max-w-3xl mx-auto">
         {/* Header */}
         <div className="text-center mb-10">
@@ -416,6 +416,7 @@ export default function SubmitTicket() {
           )}
         </div>
       </div>
+      <Chatbot />
     </div>
   );
 }
