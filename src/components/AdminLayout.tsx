@@ -534,14 +534,6 @@ export default function AdminLayout({
 
           {/* Right Actions (Notifications & Profile) */}
           <div className="flex items-center gap-2 sm:gap-4 ml-2 sm:ml-4">
-            <button
-              onClick={() => setShowMobileMenu(true)}
-              className="md:hidden p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
-              aria-label="Open navigation menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-
             {/* Notification Bell */}
             <div className="relative">
               <button
@@ -701,8 +693,60 @@ export default function AdminLayout({
         </header>
 
         {/* PAGE CONTENT RENDERS HERE */}
-        <main className="p-4 sm:p-6 lg:p-8 flex-1">{children}</main>
+        <main className="p-4 pb-24 sm:p-6 sm:pb-24 md:pb-6 lg:p-8 flex-1">
+          {children}
+        </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      {!showMobileMenu && (
+        <div className="fixed bottom-0 inset-x-0 z-[65] md:hidden px-1 pb-[max(env(safe-area-inset-bottom),4px)]">
+          <div className="mx-auto max-w-md rounded-t-[22px] border border-gray-300 border-b-0 bg-gray-100/95 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+            <div className="grid grid-cols-5 items-center px-1 py-2">
+              <Link
+                to="/"
+                className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors ${location.pathname === "/" ? "text-blue-700" : "text-slate-400 hover:text-slate-600"}`}
+              >
+                <LayoutDashboard className="w-5 h-5" />
+                <span className="text-xs mt-1 font-medium">Dashboard</span>
+              </Link>
+
+              <Link
+                to="/job-orders"
+                className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors ${location.pathname === "/job-orders" ? "text-blue-700" : "text-slate-400 hover:text-slate-600"}`}
+              >
+                <ClipboardList className="w-5 h-5" />
+                <span className="text-xs mt-1 font-medium">Orders</span>
+              </Link>
+
+              <Link
+                to="/queue"
+                className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors ${location.pathname === "/queue" ? "text-blue-700" : "text-slate-400 hover:text-slate-600"}`}
+              >
+                <Tickets className="w-5 h-5" />
+                <span className="text-xs mt-1 font-medium">Tickets</span>
+              </Link>
+
+              <Link
+                to="/customers"
+                className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors ${location.pathname === "/customers" ? "text-blue-700" : "text-slate-400 hover:text-slate-600"}`}
+              >
+                <Users className="w-5 h-5" />
+                <span className="text-xs mt-1 font-medium">Customers</span>
+              </Link>
+
+              <button
+                onClick={() => setShowMobileMenu(true)}
+                className="flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-500 hover:text-slate-700 transition-colors"
+                aria-label="Open more navigation options"
+              >
+                <Menu className="w-5 h-5" />
+                <span className="text-xs mt-1 font-medium">More</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
