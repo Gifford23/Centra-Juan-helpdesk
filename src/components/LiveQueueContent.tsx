@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { printJobOrder } from "../utils/printJobOrder"; // Make sure to import this!
+import { logSystemAction } from "../utils/auditLog";
 
 export default function LiveQueueContent() {
   const [queueData, setQueueData] = useState<any[]>([]);
@@ -125,6 +126,12 @@ export default function LiveQueueContent() {
 
       if (error) throw error;
 
+      await logSystemAction({
+        userName: savedUser?.full_name || "Unknown User",
+        action: "Deleted job order",
+        details: `Deleted job order #${jobToDelete}`,
+      });
+
       setJobToDelete(null);
       fetchJobOrders(); // Refresh table
     } catch (error) {
@@ -159,6 +166,12 @@ export default function LiveQueueContent() {
         .eq("job_order_no", parseInt(jobToEdit.id));
 
       if (error) throw error;
+
+      await logSystemAction({
+        userName: savedUser?.full_name || "Unknown User",
+        action: "Updated job order",
+        details: `Updated job order #${jobToEdit.id}`,
+      });
 
       setJobToEdit(null);
       fetchJobOrders(); // Refresh table

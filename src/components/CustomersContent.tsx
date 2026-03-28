@@ -14,6 +14,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { supabase } from "../lib/supabase"; // Import Supabase
+import { logSystemAction } from "../utils/auditLog";
 
 export default function CustomersContent() {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -129,6 +130,14 @@ export default function CustomersContent() {
 
       if (error) throw error;
 
+      await logSystemAction({
+        userName:
+          JSON.parse(localStorage.getItem("central_juan_user") || "{}")
+            .full_name || "Unknown User",
+        action: "Created customer profile",
+        details: `Added customer: ${String(formData.get("customerName") || "Unknown")}`,
+      });
+
       setIsAddModalOpen(false);
       fetchCustomers();
     } catch (error: any) {
@@ -219,7 +228,7 @@ export default function CustomersContent() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-auto max-h-[560px]">
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr>

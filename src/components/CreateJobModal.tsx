@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Loader2, X, AlertCircle, CheckCircle2, Copy } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { logSystemAction } from "../utils/auditLog";
 
 interface CreateJobModalProps {
   isOpen: boolean;
@@ -70,6 +71,15 @@ export default function CreateJobModal({
         ]);
 
       if (jobOrderError) throw jobOrderError;
+
+      const savedUser = JSON.parse(
+        localStorage.getItem("central_juan_user") || "{}",
+      );
+      await logSystemAction({
+        userName: savedUser?.full_name || "Unknown User",
+        action: "Created job order",
+        details: `Created job order with tracking ID ${newTrackingId}`,
+      });
 
       // Show the success screen with the Tracking ID
       setIsSubmitting(false);

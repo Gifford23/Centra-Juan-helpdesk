@@ -12,6 +12,7 @@ import {
 import technician from "../assets/technician.png";
 import background from "../assets/background.png";
 import { supabase } from "../lib/supabase"; // Import Supabase connection
+import { logSystemAction } from "../utils/auditLog";
 
 export default function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
@@ -38,11 +39,21 @@ export default function AdminLogin() {
 
       // 2. Handle Invalid Credentials
       if (fetchError || !data) {
+        await logSystemAction({
+          userName: email || "Unknown User",
+          action: "Failed login attempt",
+          details: `Login failed for email: ${email}`,
+        });
         throw new Error("Invalid email or password.");
       }
 
       // 3. Handle Deactivated Accounts
       if (data.status !== "Active") {
+        await logSystemAction({
+          userName: data.full_name || email || "Unknown User",
+          action: "Blocked login attempt",
+          details: "Attempted login with deactivated account.",
+        });
         throw new Error(
           "This account has been deactivated. Contact an administrator.",
         );
@@ -50,6 +61,12 @@ export default function AdminLogin() {
 
       // 4. Success! Save user data locally so the Dashboard knows who is logged in
       localStorage.setItem("central_juan_user", JSON.stringify(data));
+
+      await logSystemAction({
+        userName: data.full_name || "Unknown User",
+        action: "User login",
+        details: `${data.role || "User"} signed in successfully.`,
+      });
 
       // Navigate to the Dashboard
       navigate("/");

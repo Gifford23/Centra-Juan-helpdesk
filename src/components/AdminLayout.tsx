@@ -11,9 +11,11 @@ import {
   ChevronDown,
   Tickets,
   ClipboardList,
+  Activity,
 } from "lucide-react";
 import technician from "../assets/technician.png";
 import { supabase } from "../lib/supabase";
+import { logSystemAction } from "../utils/auditLog";
 
 type NotificationItem = {
   id: string;
@@ -290,8 +292,21 @@ export default function AdminLayout({
           )}
         </nav>
 
-        {/* Bottom Actions (Settings) */}
+        {/* Bottom Actions (Logs & Settings) */}
         <div className="p-3 border-t border-blue-700 flex flex-col gap-1.5 bg-blue-600/40">
+          {/* ONLY SUPER ADMINS CAN SEE SYSTEM LOGS */}
+          {isSuperAdmin && (
+            <Link
+              to="/logs"
+              className={`w-full flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/logs" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
+            >
+              <Activity className="w-5 h-5 flex-shrink-0" />
+              <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                System Logs
+              </span>
+            </Link>
+          )}
+
           <Link
             to="/settings"
             className={`w-full flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/settings" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
@@ -409,7 +424,13 @@ export default function AdminLayout({
               {showProfile && (
                 <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-100 rounded-lg shadow-lg p-2 z-50">
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      await logSystemAction({
+                        userName: savedUser?.full_name || "Unknown User",
+                        action: "User logout",
+                        details: "Signed out from admin dashboard.",
+                      });
+
                       // 5. CLEAR SAVED SESSION ON LOGOUT
                       localStorage.removeItem("central_juan_user");
                       setShowProfile(false);

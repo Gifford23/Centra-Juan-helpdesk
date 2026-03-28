@@ -17,6 +17,7 @@ import {
 import { supabase } from "../lib/supabase";
 import background from "../assets/background.png";
 import technician from "../assets/technician.png";
+import { logSystemAction } from "../utils/auditLog";
 
 export default function SubmitTicket() {
   const [isAllowed, setIsAllowed] = useState<boolean | null>(null);
@@ -100,6 +101,12 @@ export default function SubmitTicket() {
         ]);
 
       if (jobOrderError) throw jobOrderError;
+
+      await logSystemAction({
+        userName: String(formData.get("customerName") || "Guest Customer"),
+        action: "Submitted public ticket",
+        details: `Tracking ID ${newTrackingId} created via public portal.`,
+      });
 
       // Show Success Screen
       setSuccessTrackingId(newTrackingId);

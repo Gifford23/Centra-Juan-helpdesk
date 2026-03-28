@@ -17,6 +17,7 @@ import {
   List,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { logSystemAction } from "../utils/auditLog";
 
 // Define a type for our Job Order data
 interface JobCardData {
@@ -319,6 +320,7 @@ export default function JobOrdersContent() {
                         technicians={technicians}
                         onUpdate={fetchBoardData}
                         isSuperAdmin={isSuperAdmin}
+                        actorName={savedUser?.full_name || "Unknown User"}
                       />
                     ))}
                     {/* ONLY SUPER ADMINS CAN ADD QUICK ORDERS HERE */}
@@ -352,6 +354,7 @@ export default function JobOrdersContent() {
                         technicians={technicians}
                         onUpdate={fetchBoardData}
                         isSuperAdmin={isSuperAdmin}
+                        actorName={savedUser?.full_name || "Unknown User"}
                       />
                     ))}
                   </div>
@@ -379,6 +382,7 @@ export default function JobOrdersContent() {
                         technicians={technicians}
                         onUpdate={fetchBoardData}
                         isSuperAdmin={isSuperAdmin}
+                        actorName={savedUser?.full_name || "Unknown User"}
                       />
                     ))}
                   </div>
@@ -406,6 +410,7 @@ export default function JobOrdersContent() {
                         technicians={technicians}
                         onUpdate={fetchBoardData}
                         isSuperAdmin={isSuperAdmin}
+                        actorName={savedUser?.full_name || "Unknown User"}
                       />
                     ))}
                   </div>
@@ -454,6 +459,7 @@ export default function JobOrdersContent() {
                         technicians={technicians}
                         onUpdate={fetchBoardData}
                         isSuperAdmin={isSuperAdmin}
+                        actorName={savedUser?.full_name || "Unknown User"}
                       />
                     ))}
                   </tbody>
@@ -475,11 +481,13 @@ function KanbanCard({
   technicians,
   onUpdate,
   isSuperAdmin,
+  actorName,
 }: {
   job: JobCardData;
   technicians: string[];
   onUpdate: () => void;
   isSuperAdmin: boolean;
+  actorName: string;
 }) {
   return (
     <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-300 transition-all group relative">
@@ -498,6 +506,7 @@ function KanbanCard({
           technicians={technicians}
           onUpdate={onUpdate}
           isSuperAdmin={isSuperAdmin}
+          actorName={actorName}
         />
       </div>
 
@@ -533,11 +542,13 @@ function JobTableRow({
   technicians,
   onUpdate,
   isSuperAdmin,
+  actorName,
 }: {
   job: JobCardData;
   technicians: string[];
   onUpdate: () => void;
   isSuperAdmin: boolean;
+  actorName: string;
 }) {
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -607,6 +618,7 @@ function JobTableRow({
           technicians={technicians}
           onUpdate={onUpdate}
           isSuperAdmin={isSuperAdmin}
+          actorName={actorName}
         />
       </td>
     </tr>
@@ -621,11 +633,13 @@ function ActionMenu({
   technicians,
   onUpdate,
   isSuperAdmin,
+  actorName,
 }: {
   job: JobCardData;
   technicians: string[];
   onUpdate: () => void;
   isSuperAdmin: boolean;
+  actorName: string;
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuView, setMenuView] = useState<"main" | "assign">("main");
@@ -654,6 +668,13 @@ function ActionMenu({
         .update({ [field]: value })
         .eq("job_order_no", parseInt(job.id));
       if (error) throw error;
+
+      await logSystemAction({
+        userName: actorName,
+        action: "Updated job order",
+        details: `Updated ${field} for job order #${job.id} to ${value}`,
+      });
+
       onUpdate();
     } catch (err) {
       console.error(`Error updating ${field}:`, err);

@@ -22,6 +22,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { logSystemAction } from "../utils/auditLog";
 
 export default function PersonnelContent() {
   const [staff, setStaff] = useState<any[]>([]);
@@ -88,6 +89,13 @@ export default function PersonnelContent() {
           throw new Error("An account with this email already exists.");
         throw error;
       }
+
+      await logSystemAction({
+        userName: savedUser?.full_name || "Unknown User",
+        action: "Created personnel account",
+        details: `Created account for ${String(formData.get("fullName") || "Unknown")}`,
+      });
+
       setIsCreateModalOpen(false);
       fetchPersonnel();
     } catch (error: any) {
@@ -119,6 +127,13 @@ export default function PersonnelContent() {
           throw new Error("This email is already taken by another account.");
         throw error;
       }
+
+      await logSystemAction({
+        userName: savedUser?.full_name || "Unknown User",
+        action: "Updated personnel account",
+        details: `Updated account for ${String(formData.get("fullName") || "Unknown")}`,
+      });
+
       setPersonToEdit(null);
       fetchPersonnel();
     } catch (error: any) {
@@ -137,6 +152,13 @@ export default function PersonnelContent() {
         .delete()
         .eq("id", personToDelete.id);
       if (error) throw error;
+
+      await logSystemAction({
+        userName: savedUser?.full_name || "Unknown User",
+        action: "Deleted personnel account",
+        details: `Deleted account for ${personToDelete.full_name || "Unknown"}`,
+      });
+
       setPersonToDelete(null);
       fetchPersonnel();
     } catch (error: any) {

@@ -12,6 +12,7 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { logSystemAction } from "../utils/auditLog";
 
 export default function SettingsContent() {
   const [isLoading, setIsLoading] = useState(false);
@@ -110,6 +111,12 @@ export default function SettingsContent() {
       const updatedUser = { ...savedUser, ...updatePayload };
       localStorage.setItem("central_juan_user", JSON.stringify(updatedUser));
 
+      await logSystemAction({
+        userName: savedUser?.full_name || "Unknown User",
+        action: "Updated account settings",
+        details: "Updated personal profile information.",
+      });
+
       setSuccessMessage("Profile settings were successfully updated!");
       setFormData({ ...formData, password: "" }); // Clear password field
     } catch (error: unknown) {
@@ -137,6 +144,12 @@ export default function SettingsContent() {
         .eq("id", systemSettingsId);
 
       if (settingsError) throw settingsError;
+
+      await logSystemAction({
+        userName: savedUser?.full_name || "Unknown User",
+        action: "Updated system settings",
+        details: `Set public ticket portal to ${allowPublicTickets ? "enabled" : "disabled"}.`,
+      });
 
       setSuccessMessage("System configuration was successfully updated!");
     } catch (error: unknown) {

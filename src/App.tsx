@@ -11,6 +11,7 @@ import CustomerDetails from "./components/CustomerDetails";
 import SettingsContent from "./components/SettingsContent";
 import SubmitTicket from "./components/SubmitTicket";
 import PersonnelDetails from "./components/PersonnelDetails";
+import SystemLogsContent from "./components/SystemLogsContent";
 
 // --- NEW: Protected Route Wrapper ---
 // This component checks if a user is logged in before rendering the page.
@@ -112,6 +113,16 @@ export default function App() {
             <ProtectedRoute>
               <AdminLayout>
                 <SettingsContent />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/logs"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <SystemLogsContent />
               </AdminLayout>
             </ProtectedRoute>
           }
