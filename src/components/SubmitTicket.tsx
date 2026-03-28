@@ -28,6 +28,7 @@ export default function SubmitTicket() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successTrackingId, setSuccessTrackingId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isCopied, setIsCopied] = useState(false);
 
   // Image Upload State
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -186,6 +187,18 @@ export default function SubmitTicket() {
     }
   };
 
+  const handleCopyTrackingId = async () => {
+    if (!successTrackingId) return;
+
+    try {
+      await navigator.clipboard.writeText(successTrackingId);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 1800);
+    } catch (error) {
+      console.error("Failed to copy tracking ID:", error);
+    }
+  };
+
   // Show a loading spinner while checking the database settings
   if (isAllowed === null) {
     return (
@@ -285,14 +298,21 @@ export default function SubmitTicket() {
                   {successTrackingId}
                 </p>
                 <button
-                  onClick={() =>
-                    navigator.clipboard.writeText(successTrackingId)
-                  }
-                  className="absolute top-4 right-4 p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  title="Copy ID"
+                  onClick={handleCopyTrackingId}
+                  className={`absolute top-4 right-4 p-2 rounded-lg transition-colors ${
+                    isCopied
+                      ? "text-emerald-600 bg-emerald-50"
+                      : "text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                  }`}
+                  title={isCopied ? "Successfully copied!" : "Copy ID"}
                 >
                   <Copy className="w-5 h-5" />
                 </button>
+                {isCopied && (
+                  <p className="text-xs text-emerald-600 font-bold mt-2">
+                    Successfully copied!
+                  </p>
+                )}
               </div>
 
               <div className="flex gap-4 w-full max-w-sm">

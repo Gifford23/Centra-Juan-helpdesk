@@ -140,6 +140,18 @@ export default function AdminLayout({
     }
   }, []);
 
+  const upsertNotification = useCallback((item: NotificationItem) => {
+    setNotifications((prev) => {
+      const merged = [item, ...prev.filter((n) => n.id !== item.id)];
+      return merged
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )
+        .slice(0, 10);
+    });
+  }, []);
+
   const markNotificationsAsRead = () => {
     const now = new Date().toISOString();
     setLastReadAt(now);
@@ -147,7 +159,6 @@ export default function AdminLayout({
   };
 
   const handleBellClick = () => {
-    markNotificationsAsRead();
     setShowNotifications((v) => !v);
   };
 
@@ -194,21 +205,39 @@ export default function AdminLayout({
             if (error) throw error;
             if (!data) return;
 
-            setNotifications((prev) =>
-              [mapRowToNotification(data), ...prev].slice(0, 10),
-            );
+            upsertNotification(mapRowToNotification(data));
             playNotificationTing();
           } catch (error) {
             console.error("Error handling new notification:", error);
           }
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          fetchNotifications();
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchNotifications, notificationStorageKey]);
+  }, [fetchNotifications, notificationStorageKey, upsertNotification]);
+
+  useEffect(() => {
+    const syncNotifications = () => {
+      if (document.visibilityState === "visible") {
+        fetchNotifications();
+      }
+    };
+
+    window.addEventListener("focus", syncNotifications);
+    document.addEventListener("visibilitychange", syncNotifications);
+
+    return () => {
+      window.removeEventListener("focus", syncNotifications);
+      document.removeEventListener("visibilitychange", syncNotifications);
+    };
+  }, [fetchNotifications]);
 
   const unreadCount = notifications.filter(
     (item) => !lastReadAt || new Date(item.createdAt) > new Date(lastReadAt),
@@ -367,25 +396,50 @@ export default function AdminLayout({
                         No notifications yet.
                       </li>
                     ) : (
-                      notifications.map((item) => (
-                        <li
-                          key={item.id}
-                          onClick={handleNotificationClick}
-                          className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
-                        >
-                          <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
-                            <ListTodo className="w-4 h-4" />
-                          </div>
-                          <div className="text-sm">
-                            <p className="text-gray-900 font-medium">
-                              {item.message}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              {formatRelativeTime(item.createdAt)}
-                            </p>
-                          </div>
-                        </li>
-                      ))
+                      notifications.map((item) => {
+                        const isUnread =
+                          !lastReadAt ||
+                          new Date(item.createdAt) > new Date(lastReadAt);
+
+                        return (
+                          <li
+                            key={item.id}
+                            onClick={handleNotificationClick}
+                            className={`flex items-start gap-3 p-2 rounded-lg transition-colors cursor-pointer ${
+                              isUnread
+                                ? "bg-blue-50 border border-blue-100 hover:bg-blue-100/70"
+                                : "hover:bg-gray-50"
+                            }`}
+                          >
+                            <div
+                              className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                                isUnread
+                                  ? "bg-blue-200 text-blue-700"
+                                  : "bg-gray-100 text-gray-500"
+                              }`}
+                            >
+                              <ListTodo className="w-4 h-4" />
+                            </div>
+                            <div className="text-sm flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <p
+                                  className={`font-medium ${
+                                    isUnread ? "text-blue-900" : "text-gray-900"
+                                  }`}
+                                >
+                                  {item.message}
+                                </p>
+                                {isUnread && (
+                                  <span className="mt-1 w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                {formatRelativeTime(item.createdAt)}
+                              </p>
+                            </div>
+                          </li>
+                        );
+                      })
                     )}
                   </ul>
                 </div>
