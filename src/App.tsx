@@ -12,6 +12,7 @@ import SettingsContent from "./components/SettingsContent";
 import SubmitTicket from "./components/SubmitTicket";
 import PersonnelDetails from "./components/PersonnelDetails";
 import SystemLogsContent from "./components/SystemLogsContent";
+import JobOrderDetails from "./components/JobOrderDetails";
 
 // --- NEW: Protected Route Wrapper ---
 // This component checks if a user is logged in before rendering the page.
@@ -63,6 +64,16 @@ export default function App() {
             <ProtectedRoute>
               <AdminLayout>
                 <JobOrdersContent />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/job-orders/:id"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <JobOrderDetails />
               </AdminLayout>
             </ProtectedRoute>
           }

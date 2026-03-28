@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import Chatbot from "./Chatbot";
 import {
   Loader2,
-  CheckCircle2,
   AlertCircle,
   User,
   Phone,
@@ -14,7 +13,11 @@ import {
   ArrowRight,
   ChevronDown,
   AlertTriangle,
+  ImagePlus,
+  UploadCloud,
+  X,
 } from "lucide-react";
+import check2 from "../assets/icons/check2.png";
 import { supabase } from "../lib/supabase";
 import background from "../assets/background.png";
 import technician from "../assets/technician.png";
@@ -25,6 +28,10 @@ export default function SubmitTicket() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successTrackingId, setSuccessTrackingId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Image Upload State
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // 1. Check if the admin has enabled Public Tickets
   useEffect(() => {
@@ -55,6 +62,15 @@ export default function SubmitTicket() {
     return result;
   };
 
+  // Handle Image Selection
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -64,15 +80,47 @@ export default function SubmitTicket() {
     const newTrackingId = generateTrackingId();
 
     try {
-      // 1. Insert the Customer Profile
+      const customerName = String(formData.get("customerName") || "").trim();
+      const phoneNumber = String(formData.get("phoneNumber") || "").trim();
+      const email = String(formData.get("email") || "").trim();
+      const address = String(formData.get("address") || "").trim();
+      const deviceType = String(formData.get("deviceType") || "").trim();
+      const issueCategory = String(formData.get("issueCategory") || "").trim();
+      const brand = String(formData.get("brand") || "").trim();
+      const model = String(formData.get("model") || "").trim();
+      const serialNumber = String(formData.get("serialNumber") || "").trim();
+      const visualChecks = String(formData.get("visualChecks") || "").trim();
+      const complaint = String(formData.get("complaint") || "").trim();
+
+      // 1. Upload Image to Supabase Storage (if selected)
+      let imageUrl = null;
+      if (imageFile) {
+        const fileExt = imageFile.name.split(".").pop();
+        const fileName = `${newTrackingId}-${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("job_images")
+          .upload(fileName, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        // Get the public URL for the uploaded image
+        const { data: publicUrlData } = supabase.storage
+          .from("job_images")
+          .getPublicUrl(fileName);
+
+        imageUrl = publicUrlData.publicUrl;
+      }
+
+      // 2. Insert the Customer Profile
       const { data: customerData, error: customerError } = await supabase
         .from("customers")
         .insert([
           {
-            full_name: formData.get("customerName"),
-            phone_number: formData.get("phoneNumber"),
-            email: formData.get("email") || null,
-            address: formData.get("address"),
+            full_name: customerName,
+            phone_number: phoneNumber,
+            email: email || null,
+            address,
           },
         ])
         .select()
@@ -80,22 +128,22 @@ export default function SubmitTicket() {
 
       if (customerError) throw customerError;
 
-      // 2. Insert the Job Order as "Pending Drop-off"
+      // 3. Insert the Job Order as "Pending Drop-off"
       const { error: jobOrderError } = await supabase
         .from("job_orders")
         .insert([
           {
             customer_id: customerData.id,
             tracking_id: newTrackingId,
-            device_type: formData.get("deviceType"),
-            brand: formData.get("brand"),
-            model: formData.get("model"),
-            serial_number: formData.get("serialNumber") || "Unknown",
-            visual_checks:
-              formData.get("visualChecks") || "Not specified by customer",
-            issue_category: formData.get("issueCategory"),
-            complaint_notes: formData.get("complaint"),
-            status: "Pending Drop-off", // Automatically flagged for drop-off!
+            device_type: deviceType,
+            brand,
+            model,
+            serial_number: serialNumber || "Unknown",
+            visual_checks: visualChecks || "Not specified by customer",
+            issue_category: issueCategory,
+            complaint_notes: complaint,
+            ...(imageUrl ? { image_url: imageUrl } : {}),
+            status: "Pending Drop-off",
             priority: "Normal",
             assigned_tech: "Unassigned",
           },
@@ -103,18 +151,35 @@ export default function SubmitTicket() {
 
       if (jobOrderError) throw jobOrderError;
 
-      await logSystemAction({
-        userName: String(formData.get("customerName") || "Guest Customer"),
-        action: "Submitted public ticket",
-        details: `Tracking ID ${newTrackingId} created via public portal.`,
-      });
+      // Do not block successful ticket creation if audit logging is restricted.
+      try {
+        await logSystemAction({
+          userName: customerName || "Guest Customer",
+          action: "Submitted public ticket",
+          details: `Tracking ID ${newTrackingId} created via public portal.`,
+        });
+      } catch (auditError) {
+        console.warn("Audit logging failed after ticket creation:", auditError);
+      }
 
       // Show Success Screen
       setSuccessTrackingId(newTrackingId);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error submitting ticket:", error);
+      let backendMessage = "";
+      if (typeof error === "object" && error !== null) {
+        const errObj = error as {
+          message?: string;
+          error_description?: string;
+          details?: string;
+        };
+        backendMessage =
+          errObj.message || errObj.error_description || errObj.details || "";
+      }
       setErrorMessage(
-        "Something went wrong while submitting your request. Please try again.",
+        backendMessage
+          ? `Submit failed: ${backendMessage}`
+          : "Something went wrong while submitting your request. Please try again.",
       );
     } finally {
       setIsSubmitting(false);
@@ -159,6 +224,8 @@ export default function SubmitTicket() {
             Track an Existing Repair
           </Link>
         </div>
+
+        <Chatbot />
       </div>
     );
   }
@@ -170,10 +237,11 @@ export default function SubmitTicket() {
         backgroundImage: `url(${background})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        backgroundAttachment: "scroll",
+        backgroundAttachment: "fixed",
       }}
     >
       <div className="absolute inset-0 bg-blue-900/10"></div>
+
       <div className="relative z-10 max-w-3xl mx-auto">
         {/* Header */}
         <div className="text-center mb-10">
@@ -197,9 +265,9 @@ export default function SubmitTicket() {
         <div className="bg-white/95 backdrop-blur-xl rounded-[24px] shadow-2xl shadow-blue-900/10 overflow-hidden border border-white">
           {/* SUCCESS SCREEN */}
           {successTrackingId ? (
-            <div className="p-6 sm:p-12 flex flex-col items-center text-center animate-in fade-in zoom-in-95">
+            <div className="p-12 flex flex-col items-center text-center animate-in fade-in zoom-in-95">
               <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6">
-                <CheckCircle2 className="w-12 h-12" />
+                <img src={check2} alt="Success" className="w-12 h-12" />
               </div>
               <h2 className="text-3xl font-black text-gray-900 mb-2">
                 Request Submitted!
@@ -213,7 +281,7 @@ export default function SubmitTicket() {
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
                   Official Tracking ID
                 </p>
-                <p className="text-4xl font-black text-blue-600 tracking-wider">
+                <p className="text-2xl md:text-4xl font-black text-blue-600 tracking-wider break-words">
                   {successTrackingId}
                 </p>
                 <button
@@ -227,7 +295,7 @@ export default function SubmitTicket() {
                 </button>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
+              <div className="flex gap-4 w-full max-w-sm">
                 <Link
                   to="/track"
                   className="flex-1 bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-colors"
@@ -351,7 +419,6 @@ export default function SubmitTicket() {
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium"
                   />
 
-                  {/* SERIAL NUMBER FIELD ADDED HERE */}
                   <div className="md:col-span-2">
                     <input
                       type="text"
@@ -381,13 +448,61 @@ export default function SubmitTicket() {
                 </div>
               </div>
 
+              {/* 3. Optional Image Upload */}
+              <div>
+                <h3 className="text-sm font-bold text-blue-900 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
+                  <ImagePlus className="w-4 h-4" /> Upload Photo (Optional)
+                </h3>
+                <div className="border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors relative">
+                  {imagePreview ? (
+                    <div className="relative w-full max-w-xs mx-auto">
+                      <img
+                        src={imagePreview}
+                        alt="Device Preview"
+                        className="w-full h-48 object-cover rounded-xl shadow-sm border border-gray-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImageFile(null);
+                          setImagePreview(null);
+                        }}
+                        className="absolute -top-3 -right-3 p-1.5 bg-red-500 text-white rounded-full shadow-md hover:bg-red-600 transition-colors"
+                        title="Remove Image"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-10 h-10 text-blue-500 mb-3" />
+                      <p className="text-sm font-bold text-gray-700 text-center">
+                        Click or drag an image to upload
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1 text-center">
+                        Take a picture of the error screen or physical damage.
+                      </p>
+                      <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider text-center">
+                        PNG, JPG up to 5MB
+                      </p>
+                      <input
+                        type="file"
+                        accept="image/png, image/jpeg, image/jpg"
+                        onChange={handleImageChange}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                    </>
+                  )}
+                </div>
+              </div>
+
               {/* Terms Checkbox */}
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     required
-                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer flex-shrink-0"
                   />
                   <span className="text-xs text-blue-900 font-medium leading-relaxed">
                     I understand that submitting this form registers my device
@@ -416,6 +531,8 @@ export default function SubmitTicket() {
           )}
         </div>
       </div>
+
+      {/* CHATBOT ADDED HERE FOR THE MAIN OPEN SCREEN */}
       <Chatbot />
     </div>
   );

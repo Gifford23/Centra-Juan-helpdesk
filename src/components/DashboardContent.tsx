@@ -524,9 +524,10 @@ export default function DashboardContent() {
                     </td>
                     <td className="px-4 sm:px-7 py-5 text-center">
                       <button
-                        onClick={() => navigate("/job-orders")}
+                        // UPDATED: Now navigates directly to the specific Job Order Details page!
+                        onClick={() => navigate(`/job-orders/${job.id}`)}
                         className="text-gray-400 hover:text-gray-900 bg-transparent hover:bg-gray-100 p-2 rounded-lg transition-all mx-auto block"
-                        title="View Job Orders"
+                        title="View Ticket Details"
                       >
                         <Eye className="w-5 h-5" />
                       </button>

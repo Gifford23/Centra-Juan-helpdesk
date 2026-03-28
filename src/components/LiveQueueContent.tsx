@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // <-- IMPORT ADDED
 import {
   Search,
   Filter,
@@ -10,15 +11,18 @@ import {
   Edit,
   AlertTriangle,
   X,
+  Eye, // <-- IMPORT ADDED
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
-import { printJobOrder } from "../utils/printJobOrder"; // Make sure to import this!
+import { printJobOrder } from "../utils/printJobOrder";
 import { logSystemAction } from "../utils/auditLog";
 
 export default function LiveQueueContent() {
   const [queueData, setQueueData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [technicians, setTechnicians] = useState<string[]>([]);
+
+  const navigate = useNavigate(); // <-- ROUTER HOOK ADDED
 
   // Search and Filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -229,10 +233,9 @@ export default function LiveQueueContent() {
   });
 
   // ==========================================
-  // EXPORT TO CSV LOGIC (NEW)
+  // EXPORT TO CSV LOGIC
   // ==========================================
   const handleExportCSV = () => {
-    // 1. Define the columns we want in the Excel file
     const headers = [
       "Job Order ID",
       "Date Logged",
@@ -243,8 +246,6 @@ export default function LiveQueueContent() {
       "Priority",
     ];
 
-    // 2. Loop through the currently filtered data and format it
-    // We wrap values in quotes to prevent commas in names/devices from breaking the layout
     const csvRows = filteredQueue.map((job) => {
       return [
         `"${job.id}"`,
@@ -257,16 +258,12 @@ export default function LiveQueueContent() {
       ].join(",");
     });
 
-    // 3. Combine headers and rows with line breaks
     const csvContent = [headers.join(","), ...csvRows].join("\n");
-
-    // 4. Create a downloadable Blob and trigger the browser download
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
 
-    // Name the file based on today's date
     const dateStr = new Date().toISOString().split("T")[0];
     link.setAttribute("download", `CentralJuan_LiveQueue_${dateStr}.csv`);
 
@@ -292,7 +289,6 @@ export default function LiveQueueContent() {
           </p>
         </div>
 
-        {/* WIRED UP THE EXPORT BUTTON HERE */}
         <button
           onClick={handleExportCSV}
           disabled={filteredQueue.length === 0}
@@ -366,7 +362,7 @@ export default function LiveQueueContent() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[880px] text-left border-collapse whitespace-nowrap">
+            <table className="w-full min-w-[980px] text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr>
                   <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
@@ -383,6 +379,9 @@ export default function LiveQueueContent() {
                   </th>
                   <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                     Status
+                  </th>
+                  <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-center">
+                    View
                   </th>
                   <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
                     Actions
@@ -428,8 +427,17 @@ export default function LiveQueueContent() {
                         {job.status}
                       </span>
                     </td>
+                    <td className="px-4 sm:px-7 py-4 text-center">
+                      <button
+                        onClick={() => navigate(`/job-orders/${job.id}`)}
+                        className="inline-flex p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors tooltip"
+                        title="View Details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </td>
                     <td className="px-4 sm:px-7 py-4 text-right">
-                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-end gap-1 transition-colors">
                         {/* UPDATE BUTTON */}
                         <button
                           onClick={() => setJobToEdit(job)}

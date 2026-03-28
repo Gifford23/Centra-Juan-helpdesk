@@ -119,7 +119,10 @@ export default function PersonnelDetails() {
           onClick={() => navigate("/personnel")}
           className="p-2.5 bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-colors shadow-sm"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            <ArrowLeft className="w-5 h-5" />
+            <span className="text-sm font-bold">Go back</span>
+          </div>
         </button>
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
