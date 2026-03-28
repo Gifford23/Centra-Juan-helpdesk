@@ -1,11 +1,10 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   LayoutDashboard,
   ListTodo,
   Users,
   Settings,
-  Search,
   Bell,
   ShieldCheck,
   LogOut,
@@ -14,6 +13,19 @@ import {
   ClipboardList,
 } from "lucide-react";
 import technician from "../assets/technician.png";
+import { supabase } from "../lib/supabase";
+
+type NotificationItem = {
+  id: string;
+  message: string;
+  createdAt: string;
+};
+
+type JobNotificationRow = {
+  job_order_no: number;
+  created_at: string;
+  customers: { full_name: string } | { full_name: string }[] | null;
+};
 
 // This acts as a wrapper. The 'children' will be the actual page content.
 export default function AdminLayout({
@@ -21,9 +33,10 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [searchQuery, setSearchQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [lastReadAt, setLastReadAt] = useState<string>("");
 
   const navigate = useNavigate();
   const location = useLocation(); // Used to highlight the active tab
@@ -33,6 +46,171 @@ export default function AdminLayout({
     localStorage.getItem("central_juan_user") || "{}",
   );
   const isSuperAdmin = savedUser?.role === "Super Admin";
+
+  const notificationStorageKey = useMemo(
+    () => `central_juan_notifications_read_at_${savedUser?.id || "default"}`,
+    [savedUser?.id],
+  );
+
+  const formatRelativeTime = (isoString: string) => {
+    const date = new Date(isoString);
+    const diffMs = Date.now() - date.getTime();
+    const minutes = Math.floor(diffMs / 60000);
+
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days} day${days > 1 ? "s" : ""} ago`;
+
+    return date.toLocaleDateString();
+  };
+
+  const mapRowToNotification = (job: JobNotificationRow): NotificationItem => {
+    const customer = Array.isArray(job.customers)
+      ? job.customers[0]?.full_name
+      : job.customers?.full_name;
+
+    return {
+      id: String(job.job_order_no),
+      message: `New job order #${job.job_order_no}${customer ? ` from ${customer}` : ""}`,
+      createdAt: job.created_at,
+    };
+  };
+
+  const playNotificationTing = () => {
+    try {
+      const audioContext = new AudioContext();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(1046.5, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.08,
+        audioContext.currentTime + 0.01,
+      );
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.0001,
+        audioContext.currentTime + 0.18,
+      );
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.18);
+      oscillator.onended = () => {
+        audioContext.close();
+      };
+    } catch (error) {
+      console.error("Unable to play notification sound:", error);
+    }
+  };
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("job_orders")
+        .select(
+          `
+            job_order_no,
+            created_at,
+            customers ( full_name )
+          `,
+        )
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+
+      if (data) {
+        setNotifications(
+          (data as JobNotificationRow[]).map(mapRowToNotification),
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  }, []);
+
+  const markNotificationsAsRead = () => {
+    const now = new Date().toISOString();
+    setLastReadAt(now);
+    localStorage.setItem(notificationStorageKey, now);
+  };
+
+  const handleBellClick = () => {
+    markNotificationsAsRead();
+    setShowNotifications((v) => !v);
+  };
+
+  const handleNotificationClick = () => {
+    markNotificationsAsRead();
+    setShowNotifications(false);
+    navigate("/queue");
+  };
+
+  useEffect(() => {
+    const storedReadAt = localStorage.getItem(notificationStorageKey);
+    if (storedReadAt) {
+      setLastReadAt(storedReadAt);
+    } else {
+      const now = new Date().toISOString();
+      setLastReadAt(now);
+      localStorage.setItem(notificationStorageKey, now);
+    }
+
+    fetchNotifications();
+
+    const channel = supabase
+      .channel("admin-job-order-notifications")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "job_orders" },
+        async (payload) => {
+          const newJobOrderNo = payload.new?.job_order_no;
+          if (!newJobOrderNo) return;
+
+          try {
+            const { data, error } = await supabase
+              .from("job_orders")
+              .select(
+                `
+                  job_order_no,
+                  created_at,
+                  customers ( full_name )
+                `,
+              )
+              .eq("job_order_no", newJobOrderNo)
+              .single();
+
+            if (error) throw error;
+            if (!data) return;
+
+            setNotifications((prev) =>
+              [mapRowToNotification(data), ...prev].slice(0, 10),
+            );
+            playNotificationTing();
+          } catch (error) {
+            console.error("Error handling new notification:", error);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchNotifications, notificationStorageKey]);
+
+  const unreadCount = notifications.filter(
+    (item) => !lastReadAt || new Date(item.createdAt) > new Date(lastReadAt),
+  ).length;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex font-sans">
@@ -112,14 +290,17 @@ export default function AdminLayout({
           )}
         </nav>
 
-        {/* Bottom Actions (Settings & Sign Out) */}
+        {/* Bottom Actions (Settings) */}
         <div className="p-3 border-t border-blue-700 flex flex-col gap-1.5 bg-blue-600/40">
-          <button className="w-full flex items-center px-3 py-2.5 text-white hover:bg-blue-700/10 hover:text-white rounded-lg transition-all whitespace-nowrap font-medium">
+          <Link
+            to="/settings"
+            className={`w-full flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/settings" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
+          >
             <Settings className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Settings
             </span>
-          </button>
+          </Link>
         </div>
       </aside>
 
@@ -129,20 +310,10 @@ export default function AdminLayout({
       <div className="flex-1 ml-20 flex flex-col min-h-screen transition-all duration-300">
         {/* TOP NAVIGATION BAR (Glassmorphism Effect) */}
         <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-40 shadow-sm">
-          {/* Global Search */}
-          <div className="flex-1 max-w-xl">
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-              </div>
-              <input
-                type="text"
-                className="block w-full pl-10 pr-3 py-2 bg-gray-100/70 border-transparent rounded-lg focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-sm font-medium placeholder:text-gray-400"
-                placeholder="Search Job Order No. or Phone Number (e.g., 1415)"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+          <div className="flex-1 flex items-center">
+            <span className="text-lg md:text-xl font-black text-gray-900 tracking-tight">
+              Central Juan Service Center.
+            </span>
           </div>
 
           {/* Right Actions (Notifications & Profile) */}
@@ -150,11 +321,15 @@ export default function AdminLayout({
             {/* Notification Bell */}
             <div className="relative">
               <button
-                onClick={() => setShowNotifications((v) => !v)}
+                onClick={handleBellClick}
                 className="relative p-2 text-gray-400 hover:text-gray-700 transition-colors rounded-full hover:bg-gray-100"
               >
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 border-2 border-white rounded-full"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white flex items-center justify-center leading-none">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </button>
 
               {/* Notification Dropdown */}
@@ -164,24 +339,39 @@ export default function AdminLayout({
                     <p className="text-sm font-bold text-gray-900">
                       Notifications
                     </p>
-                    <span className="text-xs text-blue-600 font-medium cursor-pointer hover:underline">
+                    <span
+                      onClick={markNotificationsAsRead}
+                      className="text-xs text-blue-600 font-medium cursor-pointer hover:underline"
+                    >
                       Mark all as read
                     </span>
                   </div>
                   <ul className="space-y-3 max-h-64 overflow-y-auto pr-1">
-                    <li className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">
-                      <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
-                        <ListTodo className="w-4 h-4" />
-                      </div>
-                      <div className="text-sm">
-                        <p className="text-gray-900 font-medium">
-                          New job order #1419
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          2 hours ago
-                        </p>
-                      </div>
-                    </li>
+                    {notifications.length === 0 ? (
+                      <li className="text-sm text-gray-500 font-medium px-2 py-4 text-center">
+                        No notifications yet.
+                      </li>
+                    ) : (
+                      notifications.map((item) => (
+                        <li
+                          key={item.id}
+                          onClick={handleNotificationClick}
+                          className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+                            <ListTodo className="w-4 h-4" />
+                          </div>
+                          <div className="text-sm">
+                            <p className="text-gray-900 font-medium">
+                              {item.message}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {formatRelativeTime(item.createdAt)}
+                            </p>
+                          </div>
+                        </li>
+                      ))
+                    )}
                   </ul>
                 </div>
               )}

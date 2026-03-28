@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { printJobOrder } from "../utils/printJobOrder";
 import {
   Search,
   Filter,
@@ -14,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { printJobOrder } from "../utils/printJobOrder"; // Make sure to import this!
 
 export default function LiveQueueContent() {
   const [queueData, setQueueData] = useState<any[]>([]);
@@ -27,6 +27,9 @@ export default function LiveQueueContent() {
   // DELETE Modal States
   const [jobToDelete, setJobToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // PRINT Modal State
+  const [jobToPrint, setJobToPrint] = useState<string | null>(null);
 
   // EDIT Modal States
   const [jobToEdit, setJobToEdit] = useState<any | null>(null);
@@ -167,6 +170,12 @@ export default function LiveQueueContent() {
     }
   };
 
+  const handlePrintConfirm = () => {
+    if (!jobToPrint) return;
+    printJobOrder(jobToPrint);
+    setJobToPrint(null);
+  };
+
   // Status Badge Styling
   const getStatusStyle = (status: string) => {
     switch (status) {
@@ -207,6 +216,53 @@ export default function LiveQueueContent() {
     return matchesSearch && matchesStatus;
   });
 
+  // ==========================================
+  // EXPORT TO CSV LOGIC (NEW)
+  // ==========================================
+  const handleExportCSV = () => {
+    // 1. Define the columns we want in the Excel file
+    const headers = [
+      "Job Order ID",
+      "Date Logged",
+      "Customer Name",
+      "Device",
+      "Assigned Technician",
+      "Status",
+      "Priority",
+    ];
+
+    // 2. Loop through the currently filtered data and format it
+    // We wrap values in quotes to prevent commas in names/devices from breaking the layout
+    const csvRows = filteredQueue.map((job) => {
+      return [
+        `"${job.id}"`,
+        `"${job.date}"`,
+        `"${job.customer}"`,
+        `"${job.device}"`,
+        `"${job.tech}"`,
+        `"${job.status}"`,
+        `"${job.priority}"`,
+      ].join(",");
+    });
+
+    // 3. Combine headers and rows with line breaks
+    const csvContent = [headers.join(","), ...csvRows].join("\n");
+
+    // 4. Create a downloadable Blob and trigger the browser download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+
+    // Name the file based on today's date
+    const dateStr = new Date().toISOString().split("T")[0];
+    link.setAttribute("download", `CentralJuan_LiveQueue_${dateStr}.csv`);
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 relative">
       {/* ==========================================
@@ -223,7 +279,13 @@ export default function LiveQueueContent() {
               : "View your assigned job orders"}
           </p>
         </div>
-        <button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm text-sm active:scale-95">
+
+        {/* WIRED UP THE EXPORT BUTTON HERE */}
+        <button
+          onClick={handleExportCSV}
+          disabled={filteredQueue.length === 0}
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm text-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           <Download className="w-4 h-4" /> Export CSV
         </button>
       </div>
@@ -295,22 +357,22 @@ export default function LiveQueueContent() {
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
                     Job Order
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
                     Customer
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
                     Device
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
                     Technician
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100">
                     Status
                   </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
+                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-400 bg-gray-50/50 border-b border-gray-100 text-right">
                     Actions
                   </th>
                 </tr>
@@ -355,8 +417,8 @@ export default function LiveQueueContent() {
                       </span>
                     </td>
                     <td className="px-7 py-4 text-right">
-                      <div className="flex justify-end gap-1 opacity-100 transition-opacity">
-                        {/* UPDATE BUTTON: Visible to everyone */}
+                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* UPDATE BUTTON */}
                         <button
                           onClick={() => setJobToEdit(job)}
                           className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors tooltip"
@@ -376,9 +438,10 @@ export default function LiveQueueContent() {
                           </button>
                         )}
 
+                        {/* PRINT BUTTON */}
                         <button
+                          onClick={() => setJobToPrint(job.id)}
                           className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors tooltip"
-                          onClick={() => printJobOrder(job.id)}
                           title="Print Job Order"
                         >
                           <Printer className="w-4 h-4" />
@@ -432,6 +495,44 @@ export default function LiveQueueContent() {
                 ) : (
                   "Yes, Delete it"
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==========================================
+          MODAL 1.5: PRINT CONFIRMATION
+      ========================================== */}
+      {jobToPrint && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
+            onClick={() => setJobToPrint(null)}
+          ></div>
+          <div className="relative bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="mx-auto w-16 h-16 bg-gray-100 text-gray-700 rounded-full flex items-center justify-center mb-4">
+              <Printer className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-black text-gray-900 mb-2">
+              Print Job Order?
+            </h3>
+            <p className="text-sm text-gray-500 font-medium mb-6">
+              Do you want to print Job Order{" "}
+              <strong className="text-gray-900">#{jobToPrint}</strong> now?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setJobToPrint(null)}
+                className="flex-1 py-3 px-4 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePrintConfirm}
+                className="flex-1 py-3 px-4 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition-colors shadow-md shadow-gray-900/20"
+              >
+                Yes, Print
               </button>
             </div>
           </div>

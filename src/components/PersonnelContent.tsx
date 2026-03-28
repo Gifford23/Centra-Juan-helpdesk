@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ShieldCheck,
   Shield,
@@ -16,6 +17,9 @@ import {
   AlertTriangle,
   Eye,
   EyeOff,
+  LayoutGrid,
+  List,
+  ExternalLink,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
@@ -23,26 +27,26 @@ export default function PersonnelContent() {
   const [staff, setStaff] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
 
-  // GET LOGGED IN USER (To prevent self-deletion)
+  // VIEW TOGGLE STATE
+  const [viewMode, setViewMode] = useState<"table" | "card">("table");
+
+  // GET LOGGED IN USER
   const savedUser = JSON.parse(
     localStorage.getItem("central_juan_user") || "{}",
   );
 
-  // CREATE Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // EDIT Modal States
   const [personToEdit, setPersonToEdit] = useState<any | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // DELETE Modal States
   const [personToDelete, setPersonToDelete] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // 1. Fetch Staff Data
   useEffect(() => {
     fetchPersonnel();
   }, []);
@@ -64,14 +68,11 @@ export default function PersonnelContent() {
     }
   };
 
-  // 2. Create Employee
   const handleAddPersonnel = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrorMessage("");
-
     const formData = new FormData(e.currentTarget);
-
     try {
       const { error } = await supabase.from("personnel").insert([
         {
@@ -82,32 +83,26 @@ export default function PersonnelContent() {
           status: "Active",
         },
       ]);
-
       if (error) {
         if (error.code === "23505")
           throw new Error("An account with this email already exists.");
         throw error;
       }
-
       setIsCreateModalOpen(false);
       fetchPersonnel();
     } catch (error: any) {
-      console.error("Error adding personnel:", error);
       setErrorMessage(error.message || "Failed to create account.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // 3. Update Employee
   const handleUpdatePersonnel = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!personToEdit) return;
-
     setIsUpdating(true);
     setErrorMessage("");
     const formData = new FormData(e.currentTarget);
-
     try {
       const { error } = await supabase
         .from("personnel")
@@ -124,18 +119,15 @@ export default function PersonnelContent() {
           throw new Error("This email is already taken by another account.");
         throw error;
       }
-
       setPersonToEdit(null);
       fetchPersonnel();
     } catch (error: any) {
-      console.error("Error updating personnel:", error);
       setErrorMessage(error.message || "Failed to update account.");
     } finally {
       setIsUpdating(false);
     }
   };
 
-  // 4. Delete Employee
   const handleDeleteConfirm = async () => {
     if (!personToDelete) return;
     setIsDeleting(true);
@@ -144,13 +136,10 @@ export default function PersonnelContent() {
         .from("personnel")
         .delete()
         .eq("id", personToDelete.id);
-
       if (error) throw error;
-
       setPersonToDelete(null);
       fetchPersonnel();
     } catch (error: any) {
-      console.error("Error deleting personnel:", error);
       alert(
         "Failed to delete account. They may have job orders attached to them.",
       );
@@ -161,10 +150,8 @@ export default function PersonnelContent() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 relative">
-      {/* ==========================================
-          PAGE HEADER
-      ========================================== */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      {/* HEADER & CONTROLS */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
             Staff Management
@@ -173,148 +160,248 @@ export default function PersonnelContent() {
             Manage employee accounts and system roles
           </p>
         </div>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all active:scale-95 shadow-md shadow-indigo-600/20"
-        >
-          <UserPlus className="w-5 h-5" /> Add Personnel
-        </button>
+
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          {/* VIEW TOGGLE */}
+          <div className="flex bg-gray-200/50 p-1 rounded-xl border border-gray-200 w-full sm:w-auto">
+            <button
+              onClick={() => setViewMode("card")}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${viewMode === "card" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+            >
+              <LayoutGrid className="w-4 h-4" /> Cards
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${viewMode === "table" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+            >
+              <List className="w-4 h-4" /> Table
+            </button>
+          </div>
+
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all active:scale-95 shadow-md shadow-indigo-600/20"
+          >
+            <UserPlus className="w-5 h-5" /> Add Personnel
+          </button>
+        </div>
       </div>
 
-      {/* ==========================================
-          STAFF DATA TABLE
-      ========================================== */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col min-h-[400px]">
-        {isLoading ? (
-          <div className="flex-1 flex flex-col items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-4" />
-            <p className="text-gray-500 font-medium">
-              Loading personnel database...
-            </p>
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-4" />
+          <p className="text-gray-500 font-medium">
+            Loading personnel database...
+          </p>
+        </div>
+      ) : staff.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center px-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+            <Shield className="w-8 h-8 text-gray-300" />
           </div>
-        ) : staff.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center py-20 text-center px-4">
-            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-              <Shield className="w-8 h-8 text-gray-300" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-1">
-              No Staff Found
-            </h3>
-            <p className="text-gray-500">
-              Click 'Add Personnel' to create your first account.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse whitespace-nowrap">
-              <thead>
-                <tr>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
-                    Employee Name
-                  </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
-                    Email Account
-                  </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
-                    System Role
-                  </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
-                    Status
-                  </th>
-                  <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {staff.map((person) => (
-                  <tr
-                    key={person.id}
-                    className="hover:bg-indigo-50/30 transition-colors group"
-                  >
-                    {/* Name & Avatar */}
-                    <td className="px-7 py-5">
-                      <div className="flex items-center gap-4">
-                        <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ring-2 ring-white shadow-sm ${
-                            person.role === "Super Admin"
-                              ? "bg-gradient-to-tr from-indigo-600 to-indigo-400 text-white"
-                              : "bg-gradient-to-tr from-blue-500 to-blue-400 text-white"
-                          }`}
-                        >
-                          {person.full_name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-bold text-gray-900">
-                            {person.full_name}{" "}
-                            {savedUser.id === person.id && (
-                              <span className="text-xs text-indigo-500 ml-1">
-                                (You)
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-0.5 font-medium">
-                            ID: {person.id.substring(0, 8).toUpperCase()}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="px-7 py-5 text-sm text-gray-600 font-medium">
-                      {person.email}
-                    </td>
-
-                    <td className="px-7 py-5">
-                      <div className="flex items-center gap-2">
-                        {person.role === "Super Admin" ? (
-                          <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                        ) : (
-                          <Wrench className="w-4 h-4 text-blue-600" />
-                        )}
-                        <span
-                          className={`text-sm font-bold ${person.role === "Super Admin" ? "text-indigo-700" : "text-blue-700"}`}
-                        >
-                          {person.role}
-                        </span>
-                      </div>
-                    </td>
-
-                    <td className="px-7 py-5">
-                      <span
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold border ${person.status === "Active" ? "bg-emerald-50 text-emerald-700 border-emerald-200/60" : "bg-red-50 text-red-600 border-red-200/60"}`}
+          <h3 className="text-lg font-bold text-gray-900 mb-1">
+            No Staff Found
+          </h3>
+          <p className="text-gray-500">
+            Click 'Add Personnel' to create your first account.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* ==========================================
+              VIEW 1: GRID / CARD VIEW
+          ========================================== */}
+          {viewMode === "card" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {staff.map((person) => (
+                <div
+                  key={person.id}
+                  className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 hover:shadow-md transition-all group relative flex flex-col"
+                >
+                  {/* Top Row: Avatar & Actions */}
+                  <div className="flex justify-between items-start mb-5">
+                    <div
+                      className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl shadow-sm text-white ${person.role === "Super Admin" ? "bg-gradient-to-tr from-indigo-600 to-indigo-400" : "bg-gradient-to-tr from-blue-500 to-blue-400"}`}
+                    >
+                      {person.full_name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => setPersonToEdit(person)}
+                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors tooltip"
+                        title="Edit"
                       >
-                        {person.status}
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setPersonToDelete(person)}
+                        disabled={savedUser.id === person.id}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors tooltip disabled:opacity-30"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Info */}
+                  <h3 className="font-bold text-gray-900 text-lg leading-tight mb-1">
+                    {person.full_name}{" "}
+                    {savedUser.id === person.id && (
+                      <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold ml-2 uppercase align-middle tracking-wider">
+                        You
                       </span>
-                    </td>
+                    )}
+                  </h3>
+                  <p className="text-sm text-gray-500 font-medium mb-5">
+                    {person.email}
+                  </p>
 
-                    {/* Actions: Edit & Delete */}
-                    <td className="px-7 py-5 text-right">
-                      <div className="flex justify-end gap-1 opacity-100 transition-opacity">
-                        <button
-                          onClick={() => setPersonToEdit(person)}
-                          className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors tooltip"
-                          title="Edit Account"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
+                  {/* Badges */}
+                  <div className="flex items-center gap-3 mb-6">
+                    <div
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold ${person.role === "Super Admin" ? "bg-indigo-50 text-indigo-700" : "bg-blue-50 text-blue-700"}`}
+                    >
+                      {person.role === "Super Admin" ? (
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                      ) : (
+                        <Wrench className="w-3.5 h-3.5" />
+                      )}
+                      {person.role}
+                    </div>
+                    <div
+                      className={`px-2.5 py-1 rounded-md text-xs font-bold border ${person.status === "Active" ? "bg-emerald-50 border-emerald-100 text-emerald-700" : "bg-gray-50 border-gray-200 text-gray-500"}`}
+                    >
+                      {person.status}
+                    </div>
+                  </div>
 
-                        <button
-                          onClick={() => setPersonToDelete(person)}
-                          disabled={savedUser.id === person.id} // Prevent deleting self
-                          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors tooltip disabled:opacity-30 disabled:cursor-not-allowed"
-                          title="Delete Account"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                  {/* Profile Link */}
+                  <button
+                    onClick={() => navigate(`/personnel/${person.id}`)}
+                    className="mt-auto pt-4 border-t border-gray-50 w-full text-indigo-600 font-bold text-sm flex items-center justify-center gap-2 hover:text-indigo-800 transition-colors"
+                  >
+                    View Full Profile <ExternalLink className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ==========================================
+              VIEW 2: TABLE VIEW
+          ========================================== */}
+          {viewMode === "table" && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse whitespace-nowrap">
+                  <thead>
+                    <tr>
+                      <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                        Employee Name
+                      </th>
+                      <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                        Email Account
+                      </th>
+                      <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                        System Role
+                      </th>
+                      <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                        Status
+                      </th>
+                      <th className="px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {staff.map((person) => (
+                      <tr
+                        key={person.id}
+                        className="hover:bg-indigo-50/30 transition-colors group"
+                      >
+                        <td className="px-7 py-5">
+                          <div className="flex items-center gap-4">
+                            <div
+                              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ring-2 ring-white shadow-sm ${person.role === "Super Admin" ? "bg-gradient-to-tr from-indigo-600 to-indigo-400 text-white" : "bg-gradient-to-tr from-blue-500 to-blue-400 text-white"}`}
+                            >
+                              {person.full_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-900">
+                                {person.full_name}{" "}
+                                {savedUser.id === person.id && (
+                                  <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold ml-2 uppercase align-middle tracking-wider">
+                                    You
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-0.5 font-medium">
+                                ID: {person.id.substring(0, 8).toUpperCase()}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-7 py-5 text-sm text-gray-600 font-medium">
+                          {person.email}
+                        </td>
+                        <td className="px-7 py-5">
+                          <div className="flex items-center gap-2">
+                            {person.role === "Super Admin" ? (
+                              <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                            ) : (
+                              <Wrench className="w-4 h-4 text-blue-600" />
+                            )}
+                            <span
+                              className={`text-sm font-bold ${person.role === "Super Admin" ? "text-indigo-700" : "text-blue-700"}`}
+                            >
+                              {person.role}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-7 py-5">
+                          <span
+                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold border ${person.status === "Active" ? "bg-emerald-50 text-emerald-700 border-emerald-200/60" : "bg-red-50 text-red-600 border-red-200/60"}`}
+                          >
+                            {person.status}
+                          </span>
+                        </td>
+                        <td className="px-7 py-5 text-right">
+                          <div className="flex justify-end items-center gap-2 opacity-100 transition-opacity">
+                            <button
+                              onClick={() =>
+                                navigate(`/personnel/${person.id}`)
+                              }
+                              className="text-indigo-600 hover:text-indigo-800 text-sm font-bold flex items-center gap-1 transition-colors mr-2"
+                            >
+                              Profile <ExternalLink className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setPersonToEdit(person)}
+                              className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors tooltip"
+                              title="Edit"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setPersonToDelete(person)}
+                              disabled={savedUser.id === person.id}
+                              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors tooltip disabled:opacity-30"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* ==========================================
           MODAL 1: CREATE ACCOUNT
@@ -371,7 +458,7 @@ export default function PersonnelContent() {
                     type="text"
                     name="fullName"
                     required
-                    className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none transition-all text-sm font-medium shadow-sm"
+                    className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none transition-all text-sm font-medium shadow-sm"
                     placeholder="e.g. John Doe"
                   />
                 </div>
@@ -387,7 +474,7 @@ export default function PersonnelContent() {
                     type="email"
                     name="email"
                     required
-                    className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none transition-all text-sm font-medium shadow-sm"
+                    className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none transition-all text-sm font-medium shadow-sm"
                     placeholder="john@centraljuan.com"
                   />
                 </div>
@@ -404,16 +491,13 @@ export default function PersonnelContent() {
                       type={showPassword ? "text" : "password"}
                       name="password"
                       required
-                      className="w-full pl-11 pr-11 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none transition-all text-sm font-medium shadow-sm"
+                      className="w-full pl-11 pr-11 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none transition-all text-sm font-medium shadow-sm"
                       placeholder="••••••••"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((s) => !s)}
                       className="absolute right-3.5 top-3.5 p-1 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
-                      aria-label={
-                        showPassword ? "Hide password" : "Show password"
-                      }
                     >
                       {showPassword ? (
                         <EyeOff className="w-4 h-4" />
@@ -439,7 +523,7 @@ export default function PersonnelContent() {
                 </div>
               </div>
 
-              {/* RESTORED INFO BLOCK */}
+              {/* REQUESTED INFO BLOCK */}
               <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex items-start gap-3 mt-2">
                 <ShieldCheck className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-indigo-900 font-medium leading-relaxed">
@@ -454,7 +538,7 @@ export default function PersonnelContent() {
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
                   disabled={isSubmitting}
-                  className="flex-1 px-4 py-3.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-100 font-bold transition-colors text-sm disabled:opacity-50"
+                  className="flex-1 px-4 py-3.5 border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-100 transition-colors text-sm disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -584,7 +668,7 @@ export default function PersonnelContent() {
                 </div>
               </div>
 
-              {/* RESTORED INFO BLOCK FOR EDIT MODAL TOO */}
+              {/* REQUESTED INFO BLOCK */}
               <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex items-start gap-3 mt-2">
                 <ShieldCheck className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-indigo-900 font-medium leading-relaxed">
