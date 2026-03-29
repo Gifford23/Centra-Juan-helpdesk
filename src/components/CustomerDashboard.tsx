@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LogOut,
@@ -11,6 +11,7 @@ import {
   Search,
   RefreshCw,
   UserCircle2,
+  Camera, // <-- IMPORTED CAMERA ICON
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import technician from "../assets/technician.png";
@@ -45,11 +46,17 @@ export default function CustomerDashboard() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
+  // Profile Upload States
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const navigate = useNavigate();
-  const customer = JSON.parse(
-    localStorage.getItem("central_juan_customer") || "{}",
+
+  // Use state for customer so the UI updates instantly when avatar changes
+  const [customerProfile, setCustomerProfile] = useState(
+    JSON.parse(localStorage.getItem("central_juan_customer") || "{}"),
   );
-  const customerId = customer.id;
+  const customerId = customerProfile.id;
 
   const fetchMyTickets = useCallback(
     async (silent = false) => {
@@ -79,7 +86,7 @@ export default function CustomerDashboard() {
     if (!customerId) return;
     fetchMyTickets();
 
-    // REAL-TIME NOTIFICATIONS: Listen specifically for changes to THIS customer's tickets
+    // REAL-TIME NOTIFICATIONS
     const channel = supabase
       .channel("customer_updates")
       .on(
@@ -112,6 +119,54 @@ export default function CustomerDashboard() {
     await new Promise((resolve) => setTimeout(resolve, 650));
     localStorage.removeItem("central_juan_customer");
     navigate("/portal-login");
+  };
+
+  // --- AVATAR UPLOAD LOGIC ---
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      setIsUploadingAvatar(true);
+
+      // Upload to 'avatars' bucket
+      const fileExt = file.name.split(".").pop();
+      const fileName = `customer-${customerProfile.id}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get Public URL
+      const { data: publicUrlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(fileName);
+
+      const newAvatarUrl = publicUrlData.publicUrl;
+
+      // Update customers table
+      const { error: dbError } = await supabase
+        .from("customers")
+        .update({ avatar_url: newAvatarUrl })
+        .eq("id", customerProfile.id);
+
+      if (dbError) throw dbError;
+
+      // Update local storage and UI
+      const updatedCustomer = { ...customerProfile, avatar_url: newAvatarUrl };
+      setCustomerProfile(updatedCustomer);
+      localStorage.setItem(
+        "central_juan_customer",
+        JSON.stringify(updatedCustomer),
+      );
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      alert("Failed to upload profile picture. Please try again.");
+    } finally {
+      setIsUploadingAvatar(false);
+    }
   };
 
   const activeTickets = tickets.filter((t) => !isCompletedTicket(t.status));
@@ -203,19 +258,54 @@ export default function CustomerDashboard() {
               )}
             </div>
 
+            {/* Profile Section with Avatar Upload */}
             <div className="flex items-center gap-3 pl-3 sm:pl-4 border-l border-stone-200">
-              <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
-                {customer.full_name?.charAt(0).toUpperCase()}
+              {/* CLICKABLE AVATAR */}
+              <div
+                className="relative group cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+                title="Change Profile Picture"
+              >
+                {isUploadingAvatar ? (
+                  <div className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center border border-stone-200">
+                    <Loader2 className="w-4 h-4 text-amber-600 animate-spin" />
+                  </div>
+                ) : customerProfile.avatar_url ? (
+                  <img
+                    src={customerProfile.avatar_url}
+                    alt="Profile"
+                    className="w-9 h-9 rounded-full object-cover border border-stone-200 shadow-sm group-hover:opacity-80 transition-opacity"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm shadow-sm group-hover:bg-amber-200 transition-colors">
+                    {customerProfile.full_name?.charAt(0).toUpperCase()}
+                  </div>
+                )}
+
+                {/* Tiny Camera Hover Icon */}
+                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow border border-stone-200 hidden group-hover:block transition-all">
+                  <Camera className="w-3 h-3 text-stone-600" />
+                </div>
               </div>
+
+              {/* Hidden File Input */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
+
               <div className="hidden md:block">
                 <p className="text-sm font-bold text-stone-900 leading-none">
-                  {customer.full_name}
+                  {customerProfile.full_name}
                 </p>
               </div>
               <button
                 onClick={handleLogout}
                 disabled={isSigningOut}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-stone-200 text-sm font-semibold text-stone-700 hover:bg-stone-50 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-stone-200 text-sm font-semibold text-stone-700 hover:bg-stone-50 disabled:opacity-70 disabled:cursor-not-allowed transition-colors ml-1"
                 title="Sign out"
               >
                 {isSigningOut ? (
@@ -240,7 +330,7 @@ export default function CustomerDashboard() {
                 Welcome back
               </p>
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
-                {customer.full_name || "Valued Customer"}
+                {customerProfile.full_name || "Valued Customer"}
               </h1>
               <p className="mt-2 text-sm text-gray-100 max-w-xl">
                 Customer Dashboard Monitoring Status
