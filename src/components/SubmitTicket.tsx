@@ -401,7 +401,8 @@ export default function SubmitTicket() {
                     <input
                       type="email"
                       name="email"
-                      placeholder="Email Address"
+                      required
+                      placeholder="Email Address *"
                       className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium"
                     />
                   </div>
@@ -558,7 +559,10 @@ export default function SubmitTicket() {
                     I understand that submitting this form registers my device
                     in the Central Juan system. A minimum diagnostic fee of PHP
                     150.00 applies once the device is dropped off and inspected.
-                    I am responsible for backing up my data prior to drop-off.
+                    I am responsible for backing up my data prior to drop-off.{" "}
+                    <Link to="/terms" target="_blank" className="text-blue-600 font-bold hover:underline">
+                      Read full Terms & Policies.
+                    </Link>
                   </span>
                 </label>
               </div>

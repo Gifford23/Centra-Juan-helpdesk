@@ -13,9 +13,14 @@ import SubmitTicket from "./components/SubmitTicket";
 import PersonnelDetails from "./components/PersonnelDetails";
 import SystemLogsContent from "./components/SystemLogsContent";
 import JobOrderDetails from "./components/JobOrderDetails";
+import TermsAndConditions from "./components/TermsAndConditions";
 
-// --- NEW: Protected Route Wrapper ---
-// This component checks if a user is logged in before rendering the page.
+// --- NEW CUSTOMER PORTAL IMPORTS ---
+import CustomerLogin from "./components/CustomerLogin";
+import CustomerDashboard from "./components/CustomerDashboard";
+
+// --- Protected Route Wrappers ---
+// This component checks if an ADMIN is logged in before rendering the page.
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const savedUser = localStorage.getItem("central_juan_user");
 
@@ -28,6 +33,21 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// This component checks if a CUSTOMER is logged in before rendering the customer dashboard.
+const CustomerProtectedRoute = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
+  const savedCustomer = localStorage.getItem("central_juan_customer");
+
+  if (!savedCustomer) {
+    return <Navigate to="/portal-login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -36,6 +56,18 @@ export default function App() {
         <Route path="/login" element={<AdminLogin />} />
         <Route path="/track" element={<TrackRepair />} />
         <Route path="/submit-ticket" element={<SubmitTicket />} />
+        <Route path="/terms" element={<TermsAndConditions />} />
+
+        {/* CUSTOMER PORTAL ROUTES (NEW) */}
+        <Route path="/portal-login" element={<CustomerLogin />} />
+        <Route
+          path="/my-portal"
+          element={
+            <CustomerProtectedRoute>
+              <CustomerDashboard />
+            </CustomerProtectedRoute>
+          }
+        />
 
         {/* SECURE ADMIN ROUTES */}
         <Route
