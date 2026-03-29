@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom"; // <-- IMPORT ADDED
 import {
   Search,
@@ -17,8 +17,30 @@ import { supabase } from "../lib/supabase";
 import { printJobOrder } from "../utils/printJobOrder";
 import { logSystemAction } from "../utils/auditLog";
 
+interface JobOrderRow {
+  job_order_no: number;
+  created_at: string;
+  brand: string;
+  model: string;
+  assigned_tech: string | null;
+  status: string;
+  priority: string | null;
+  customers: { full_name: string } | { full_name: string }[] | null;
+}
+
+interface QueueItem {
+  id: string;
+  date: string;
+  createdAt: string;
+  customer: string;
+  device: string;
+  tech: string;
+  status: string;
+  priority: string;
+}
+
 export default function LiveQueueContent() {
-  const [queueData, setQueueData] = useState<any[]>([]);
+  const [queueData, setQueueData] = useState<QueueItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [technicians, setTechnicians] = useState<string[]>([]);
 
@@ -36,22 +58,18 @@ export default function LiveQueueContent() {
   const [jobToPrint, setJobToPrint] = useState<string | null>(null);
 
   // EDIT Modal States
-  const [jobToEdit, setJobToEdit] = useState<any | null>(null);
+  const [jobToEdit, setJobToEdit] = useState<QueueItem | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
   // RBAC: Check user role
   const savedUser = JSON.parse(
     localStorage.getItem("central_juan_user") || "{}",
   );
+  const savedUserFullName = savedUser?.full_name;
   const isSuperAdmin = savedUser?.role === "Super Admin";
 
-  useEffect(() => {
-    fetchJobOrders();
-    if (isSuperAdmin) fetchTechnicians();
-  }, []);
-
   // Fetch Technicians for the Edit Modal dropdown
-  const fetchTechnicians = async () => {
+  const fetchTechnicians = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from("personnel")
@@ -63,9 +81,9 @@ export default function LiveQueueContent() {
     } catch (error) {
       console.error("Error fetching technicians:", error);
     }
-  };
+  }, []);
 
-  const fetchJobOrders = async () => {
+  const fetchJobOrders = useCallback(async () => {
     try {
       setIsLoading(true);
 
@@ -85,27 +103,36 @@ export default function LiveQueueContent() {
         )
         .order("created_at", { ascending: false });
 
-      if (!isSuperAdmin && savedUser?.full_name) {
-        query = query.eq("assigned_tech", savedUser.full_name);
+      if (!isSuperAdmin && savedUserFullName) {
+        query = query.eq("assigned_tech", savedUserFullName);
       }
 
       const { data, error } = await query;
       if (error) throw error;
 
       if (data) {
-        const formattedData = data.map((job: any) => ({
-          id: job.job_order_no.toString(),
-          date: new Date(job.created_at).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          }),
-          customer: job.customers?.full_name || "Unknown Customer",
-          device: `${job.brand} ${job.model}`,
-          tech: job.assigned_tech || "Unassigned",
-          status: job.status,
-          priority: job.priority || "Normal",
-        }));
+        const formattedData: QueueItem[] = (data as JobOrderRow[]).map(
+          (job) => {
+            const customerName = Array.isArray(job.customers)
+              ? job.customers[0]?.full_name
+              : job.customers?.full_name;
+
+            return {
+              id: job.job_order_no.toString(),
+              date: new Date(job.created_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              }),
+              createdAt: job.created_at,
+              customer: customerName || "Unknown Customer",
+              device: `${job.brand} ${job.model}`,
+              tech: job.assigned_tech || "Unassigned",
+              status: job.status,
+              priority: job.priority || "Normal",
+            };
+          },
+        );
         setQueueData(formattedData);
       }
     } catch (error) {
@@ -113,7 +140,12 @@ export default function LiveQueueContent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isSuperAdmin, savedUserFullName]);
+
+  useEffect(() => {
+    fetchJobOrders();
+    if (isSuperAdmin) fetchTechnicians();
+  }, [fetchJobOrders, fetchTechnicians, isSuperAdmin]);
 
   // ==========================================
   // ACTION HANDLERS: DELETE & UPDATE
@@ -153,14 +185,19 @@ export default function LiveQueueContent() {
     const formData = new FormData(e.currentTarget);
 
     try {
-      const updateData: any = {
-        status: formData.get("status"),
-        priority: formData.get("priority"),
-      };
+      const status = String(formData.get("status") || "");
+      const priority = String(formData.get("priority") || "");
+      const updateData: {
+        status: string;
+        priority: string;
+        assigned_tech?: string;
+      } = { status, priority };
 
       // Only Super Admins can reassign tickets from this view
       if (isSuperAdmin) {
-        updateData.assigned_tech = formData.get("assigned_tech");
+        updateData.assigned_tech = String(
+          formData.get("assigned_tech") || "Unassigned",
+        );
       }
 
       const { error } = await supabase
@@ -222,6 +259,26 @@ export default function LiveQueueContent() {
       .toUpperCase();
   };
 
+  const getRelativeTime = (isoString: string) => {
+    const date = new Date(isoString);
+    const diffMs = Date.now() - date.getTime();
+    const minutes = Math.floor(diffMs / 60000);
+
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+
+    const days = Math.floor(hours / 24);
+    return `${days} day${days > 1 ? "s" : ""} ago`;
+  };
+
+  const isRecentlySubmitted = (isoString: string) => {
+    const diffMs = Date.now() - new Date(isoString).getTime();
+    return diffMs <= 60 * 60 * 1000;
+  };
+
   // Filter Logic
   const filteredQueue = queueData.filter((job) => {
     const matchesSearch =
@@ -231,6 +288,20 @@ export default function LiveQueueContent() {
     const matchesStatus = statusFilter === "" || job.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const totalInQueue = queueData.length;
+  const activeJobs = queueData.filter(
+    (job) =>
+      job.status === "Diagnosing" ||
+      job.status === "In Progress" ||
+      job.status === "Waiting on Parts",
+  ).length;
+  const readyJobs = queueData.filter(
+    (job) => job.status === "Ready" || job.status === "Ready for Pickup",
+  ).length;
+  const unassignedJobs = queueData.filter(
+    (job) => job.tech === "Unassigned",
+  ).length;
 
   // ==========================================
   // EXPORT TO CSV LOGIC
@@ -273,32 +344,78 @@ export default function LiveQueueContent() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 relative">
+    <div className="relative space-y-6 animate-in fade-in duration-500">
+      <div className="pointer-events-none absolute -top-12 -right-20 h-56 w-56 rounded-full bg-blue-200/35 blur-3xl" />
+      <div className="pointer-events-none absolute top-44 -left-24 h-64 w-64 rounded-full bg-cyan-100/35 blur-3xl" />
+
       {/* ==========================================
           HEADER & SEARCH BAR
       ========================================== */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
-            Live Queue
-          </h1>
-          <p className="text-gray-500 text-sm mt-1 font-medium">
-            {isSuperAdmin
-              ? "Manage all active and pending job orders"
-              : "View your assigned job orders"}
-          </p>
+      <div className="relative overflow-hidden rounded-3xl border border-blue-100/80 bg-gradient-to-br from-white via-blue-50/35 to-cyan-50/25 p-5 sm:p-7 shadow-[0_16px_40px_rgba(30,64,175,0.08)]">
+        <div className="absolute right-0 top-0 h-32 w-32 -translate-y-8 translate-x-8 rounded-full bg-blue-200/30 blur-2xl" />
+        <div className="absolute left-0 bottom-0 h-24 w-24 -translate-x-8 translate-y-8 rounded-full bg-cyan-100/50 blur-2xl" />
+
+        <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.16em] font-black text-blue-500 mb-2">
+              Operations Monitoring
+            </p>
+            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+              Live Queue
+            </h1>
+            <p className="text-slate-600 text-sm mt-1.5 font-medium">
+              {isSuperAdmin
+                ? "Manage all active and pending job orders"
+                : "View your assigned job orders"}
+            </p>
+          </div>
+
+          <button
+            onClick={handleExportCSV}
+            disabled={filteredQueue.length === 0}
+            className="w-full lg:w-auto flex items-center justify-center gap-2 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 px-5 py-3 rounded-xl font-black transition-all shadow-sm text-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" /> Export CSV
+          </button>
         </div>
 
-        <button
-          onClick={handleExportCSV}
-          disabled={filteredQueue.length === 0}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm text-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Download className="w-4 h-4" /> Export CSV
-        </button>
+        <div className="relative mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="rounded-2xl border border-slate-200/70 bg-white/90 px-4 py-3 shadow-sm">
+            <p className="text-[11px] uppercase tracking-[0.14em] font-black text-slate-400">
+              Total in Queue
+            </p>
+            <p className="text-xl font-black text-slate-900 mt-1">
+              {totalInQueue}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/70 bg-white/90 px-4 py-3 shadow-sm">
+            <p className="text-[11px] uppercase tracking-[0.14em] font-black text-slate-400">
+              Active Work
+            </p>
+            <p className="text-xl font-black text-amber-600 mt-1">
+              {activeJobs}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/70 bg-white/90 px-4 py-3 shadow-sm">
+            <p className="text-[11px] uppercase tracking-[0.14em] font-black text-slate-400">
+              Ready
+            </p>
+            <p className="text-xl font-black text-emerald-600 mt-1">
+              {readyJobs}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200/70 bg-white/90 px-4 py-3 shadow-sm">
+            <p className="text-[11px] uppercase tracking-[0.14em] font-black text-slate-400">
+              Unassigned
+            </p>
+            <p className="text-xl font-black text-rose-600 mt-1">
+              {unassignedJobs}
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col xl:flex-row gap-4 justify-between items-stretch xl:items-center">
+      <div className="bg-white/90 backdrop-blur p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-[0_10px_24px_rgba(15,23,42,0.05)] flex flex-col xl:flex-row gap-4 justify-between items-stretch xl:items-center">
         <div className="relative w-full xl:max-w-md">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-gray-400" />
@@ -307,19 +424,19 @@ export default function LiveQueueContent() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-11 pr-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-sm font-medium placeholder:text-gray-400"
+            className="block w-full pl-11 pr-4 py-3 bg-slate-50/75 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-sm font-semibold placeholder:text-slate-400"
             placeholder="Search Job Order, Name, or Device..."
           />
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
-          <div className="relative flex-1 sm:w-48">
+        <div className="w-full xl:w-auto xl:ml-auto">
+          <div className="relative w-full sm:w-52">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
               <Filter className="h-4 w-4 text-gray-400" />
             </div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="block w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none text-sm font-medium appearance-none bg-white cursor-pointer hover:bg-gray-50 transition-colors"
+              className="block w-full pl-10 pr-10 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none text-sm font-semibold appearance-none bg-white cursor-pointer hover:bg-slate-50 transition-colors"
             >
               <option value="">All Statuses</option>
               <option value="Received">Received</option>
@@ -338,7 +455,7 @@ export default function LiveQueueContent() {
       {/* ==========================================
           MASTER DATA TABLE
       ========================================== */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden min-h-[400px] flex flex-col relative z-0">
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-[0_12px_28px_rgba(15,23,42,0.06)] overflow-hidden min-h-[420px] flex flex-col relative z-0">
         {isLoading ? (
           <div className="flex-1 flex flex-col items-center justify-center py-20">
             <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-4" />
@@ -347,8 +464,8 @@ export default function LiveQueueContent() {
             </p>
           </div>
         ) : filteredQueue.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center py-20 text-center px-4">
-            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+          <div className="flex-1 flex flex-col items-center justify-center py-20 text-center px-4 bg-gradient-to-b from-white to-slate-50/60">
+            <div className="w-16 h-16 bg-white border border-slate-200 rounded-full flex items-center justify-center mb-4 shadow-sm">
               <Filter className="w-8 h-8 text-gray-300" />
             </div>
             <h3 className="text-lg font-bold text-gray-900 mb-1">
@@ -362,17 +479,27 @@ export default function LiveQueueContent() {
           </div>
         ) : (
           <>
-            <div className="md:hidden p-3 space-y-3">
+            <div className="md:hidden p-3 sm:p-4 space-y-3 bg-gradient-to-b from-slate-50/40 to-white">
               {filteredQueue.map((job) => (
                 <div
                   key={job.id}
-                  className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
+                  className="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_10px_22px_rgba(15,23,42,0.05)]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-black text-gray-900">#{job.id}</p>
-                      <p className="text-xs text-gray-500 font-medium mt-0.5">
-                        {job.date}
+                      <div className="mt-0.5 flex items-center gap-2">
+                        <p className="text-xs text-gray-500 font-medium">
+                          {job.date}
+                        </p>
+                        {isRecentlySubmitted(job.createdAt) && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+                            New
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-blue-600 font-bold mt-1">
+                        {getRelativeTime(job.createdAt)}
                       </p>
                     </div>
                     <span
@@ -447,43 +574,53 @@ export default function LiveQueueContent() {
               ))}
             </div>
 
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-[600px]">
               <table className="w-full min-w-[980px] text-left border-collapse whitespace-nowrap">
                 <thead>
                   <tr>
-                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                    <th className="sticky top-0 z-10 px-4 sm:px-7 py-4 font-black text-[11px] uppercase tracking-[0.13em] text-slate-700 bg-slate-100 border-b border-slate-200">
                       Job Order
                     </th>
-                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                    <th className="sticky top-0 z-10 px-4 sm:px-7 py-4 font-black text-[11px] uppercase tracking-[0.13em] text-slate-700 bg-slate-100 border-b border-slate-200">
                       Customer
                     </th>
-                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                    <th className="sticky top-0 z-10 px-4 sm:px-7 py-4 font-black text-[11px] uppercase tracking-[0.13em] text-slate-700 bg-slate-100 border-b border-slate-200">
                       Device
                     </th>
-                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                    <th className="sticky top-0 z-10 px-4 sm:px-7 py-4 font-black text-[11px] uppercase tracking-[0.13em] text-slate-700 bg-slate-100 border-b border-slate-200">
                       Technician
                     </th>
-                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
+                    <th className="sticky top-0 z-10 px-4 sm:px-7 py-4 font-black text-[11px] uppercase tracking-[0.13em] text-slate-700 bg-slate-100 border-b border-slate-200">
                       Status
                     </th>
-                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-center">
+                    <th className="sticky top-0 z-10 px-4 sm:px-7 py-4 font-black text-[11px] uppercase tracking-[0.13em] text-slate-700 bg-slate-100 border-b border-slate-200 text-center">
                       View
                     </th>
-                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
+                    <th className="sticky top-0 z-10 px-4 sm:px-7 py-4 font-black text-[11px] uppercase tracking-[0.13em] text-slate-700 bg-slate-100 border-b border-slate-200 text-right">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-slate-100">
                   {filteredQueue.map((job) => (
                     <tr
                       key={job.id}
-                      className="hover:bg-blue-50/30 transition-colors group"
+                      className="hover:bg-blue-50/35 transition-colors group"
                     >
                       <td className="px-4 sm:px-7 py-4">
                         <p className="font-black text-gray-900">#{job.id}</p>
-                        <p className="text-xs text-gray-500 font-medium mt-0.5">
-                          {job.date}
+                        <div className="mt-0.5 flex items-center gap-2">
+                          <p className="text-xs text-gray-500 font-medium">
+                            {job.date}
+                          </p>
+                          {isRecentlySubmitted(job.createdAt) && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+                              New
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-blue-600 font-bold mt-1">
+                          {getRelativeTime(job.createdAt)}
                         </p>
                       </td>
                       <td className="px-4 sm:px-7 py-4">

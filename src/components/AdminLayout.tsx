@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LayoutDashboard,
   ListTodo,
@@ -14,8 +14,10 @@ import {
   Activity,
   Menu,
   X,
+  Loader2,
 } from "lucide-react";
 import technician from "../assets/technician.png";
+import tingSound from "../assets/sound/ting.mp3";
 import { supabase } from "../lib/supabase";
 import { logSystemAction } from "../utils/auditLog";
 
@@ -40,8 +42,11 @@ export default function AdminLayout({
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [lastReadAt, setLastReadAt] = useState<string>("");
+  const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUnlockedRef = useRef(false);
 
   const navigate = useNavigate();
   const location = useLocation(); // Used to highlight the active tab
@@ -118,36 +123,76 @@ export default function AdminLayout({
     };
   };
 
-  const playNotificationTing = () => {
+  const playNotificationTing = useCallback(() => {
+    const audio = notificationAudioRef.current;
+    if (!audio) return;
+
     try {
-      const audioContext = new AudioContext();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(1046.5, audioContext.currentTime);
-      gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(
-        0.08,
-        audioContext.currentTime + 0.01,
-      );
-      gainNode.gain.exponentialRampToValueAtTime(
-        0.0001,
-        audioContext.currentTime + 0.18,
-      );
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.18);
-      oscillator.onended = () => {
-        audioContext.close();
-      };
+      audio.volume = 1;
+      audio.muted = false;
+      audio.currentTime = 0;
+      const playPromise = audio.play();
+      if (playPromise) {
+        void playPromise
+          .then(() => {
+            audioUnlockedRef.current = true;
+          })
+          .catch((error) => {
+            console.error("Unable to play notification sound:", error);
+          });
+      }
     } catch (error) {
       console.error("Unable to play notification sound:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const audio = new Audio(tingSound);
+    audio.preload = "auto";
+    audio.volume = 1;
+    audio.muted = false;
+    notificationAudioRef.current = audio;
+
+    return () => {
+      if (notificationAudioRef.current) {
+        notificationAudioRef.current.pause();
+        notificationAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const unlockAudio = () => {
+      const audio = notificationAudioRef.current;
+      if (!audio || audioUnlockedRef.current) return;
+
+      audio.volume = 1;
+      audio.muted = false;
+
+      const playPromise = audio.play();
+      if (!playPromise) return;
+
+      void playPromise
+        .then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          audioUnlockedRef.current = true;
+        })
+        .catch(() => {
+          // Browser may still block autoplay until a stronger user gesture.
+        });
+    };
+
+    window.addEventListener("pointerdown", unlockAudio, { once: true });
+    window.addEventListener("keydown", unlockAudio, { once: true });
+    window.addEventListener("touchstart", unlockAudio, { once: true });
+
+    return () => {
+      window.removeEventListener("pointerdown", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+      window.removeEventListener("touchstart", unlockAudio);
+    };
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -256,7 +301,12 @@ export default function AdminLayout({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchNotifications, notificationStorageKey, upsertNotification]);
+  }, [
+    fetchNotifications,
+    notificationStorageKey,
+    playNotificationTing,
+    upsertNotification,
+  ]);
 
   useEffect(() => {
     const syncNotifications = () => {
@@ -289,12 +339,23 @@ export default function AdminLayout({
     };
   }, [showMobileMenu]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setShowMobileMenu(false);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const unreadCount = notifications.filter(
     (item) => !lastReadAt || new Date(item.createdAt) > new Date(lastReadAt),
   ).length;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex font-sans overflow-x-hidden">
       {/* ==========================================
           LEFT SIDEBAR (Collapse/Expand on Hover)
       ========================================== */}
@@ -523,17 +584,17 @@ export default function AdminLayout({
       {/* ==========================================
           MAIN CONTENT AREA 
       ========================================== */}
-      <div className="flex-1 ml-0 md:ml-20 flex flex-col min-h-screen transition-all duration-300">
+      <div className="flex-1 w-full min-w-0 ml-0 md:ml-20 flex flex-col min-h-screen transition-all duration-300">
         {/* TOP NAVIGATION BAR (Glassmorphism Effect) */}
-        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-3 sm:px-5 lg:px-8 sticky top-0 z-40 shadow-sm">
-          <div className="flex-1 flex items-center">
-            <span className="text-sm sm:text-base md:text-xl font-black text-gray-900 tracking-tight truncate">
+        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between gap-2 px-3 sm:px-4 md:px-6 lg:px-8 sticky top-0 z-40 shadow-sm">
+          <div className="flex-1 min-w-0 flex items-center">
+            <span className="text-sm sm:text-base lg:text-xl font-black text-gray-900 tracking-tight truncate">
               Central Juan Service Center.
             </span>
           </div>
 
           {/* Right Actions (Notifications & Profile) */}
-          <div className="flex items-center gap-2 sm:gap-4 ml-2 sm:ml-4">
+          <div className="flex items-center gap-1.5 sm:gap-3 ml-1 sm:ml-3 flex-shrink-0">
             {/* Notification Bell */}
             <div className="relative">
               <button
@@ -550,7 +611,7 @@ export default function AdminLayout({
 
               {/* Notification Dropdown */}
               {showNotifications && (
-                <div className="absolute right-0 mt-3 w-[calc(100vw-5.5rem)] max-w-80 bg-white border border-gray-100 shadow-xl shadow-gray-200/50 rounded-xl p-4 z-50 transform opacity-100 scale-100 transition-all">
+                <div className="absolute right-0 mt-3 w-[min(20rem,calc(100vw-1rem))] bg-white border border-gray-100 shadow-xl shadow-gray-200/50 rounded-xl p-4 z-50 transform opacity-100 scale-100 transition-all">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm font-bold text-gray-900">
                       Notifications
@@ -618,13 +679,13 @@ export default function AdminLayout({
               )}
             </div>
 
-            <div className="h-6 w-px bg-gray-200"></div>
+            <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
 
             {/* User Profile Area */}
             <div className="relative">
               <div
                 onClick={() => setShowProfile((v) => !v)}
-                className="flex items-center gap-3 cursor-pointer group"
+                className="flex items-center gap-2 sm:gap-3 cursor-pointer group"
               >
                 {/* 3. DYNAMIC PROFILE AVATAR */}
                 {userProfile?.avatar_url ? (
@@ -670,21 +731,32 @@ export default function AdminLayout({
 
                   <button
                     onClick={async () => {
-                      await logSystemAction({
-                        userName: userProfile?.full_name || "Unknown User",
-                        action: "User logout",
-                        details: "Signed out from admin dashboard.",
-                      });
-
-                      // 5. CLEAR SAVED SESSION ON LOGOUT
-                      localStorage.removeItem("central_juan_user");
-                      setShowProfile(false);
-                      navigate("/login");
+                      setIsSigningOut(true);
+                      try {
+                        await logSystemAction({
+                          userName: userProfile?.full_name || "Unknown User",
+                          action: "User logout",
+                          details: "Signed out from admin dashboard.",
+                        });
+                      } catch (error) {
+                        console.error("Logout logging error:", error);
+                      } finally {
+                        // 5. CLEAR SAVED SESSION ON LOGOUT
+                        localStorage.removeItem("central_juan_user");
+                        setShowProfile(false);
+                        navigate("/login");
+                        setIsSigningOut(false);
+                      }
                     }}
+                    disabled={isSigningOut}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                   >
-                    <LogOut className="w-4 h-4 text-red-500" />
-                    Sign Out
+                    {isSigningOut ? (
+                      <Loader2 className="w-4 h-4 text-red-500 animate-spin" />
+                    ) : (
+                      <LogOut className="w-4 h-4 text-red-500" />
+                    )}
+                    {isSigningOut ? "Signing Out..." : "Sign Out"}
                   </button>
                 </div>
               )}
@@ -693,15 +765,15 @@ export default function AdminLayout({
         </header>
 
         {/* PAGE CONTENT RENDERS HERE */}
-        <main className="p-4 pb-24 sm:p-6 sm:pb-24 md:pb-6 lg:p-8 flex-1">
+        <main className="p-3 pb-24 sm:p-5 sm:pb-24 md:pb-6 lg:p-8 flex-1 min-w-0">
           {children}
         </main>
       </div>
 
       {/* Mobile Bottom Navigation */}
       {!showMobileMenu && (
-        <div className="fixed bottom-0 inset-x-0 z-[65] md:hidden px-1 pb-[max(env(safe-area-inset-bottom),4px)]">
-          <div className="mx-auto max-w-md rounded-t-[22px] border border-gray-300 border-b-0 bg-gray-100/95 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+        <div className="fixed bottom-0 inset-x-0 z-[65] md:hidden px-0.5 sm:px-1 pb-[max(env(safe-area-inset-bottom),4px)]">
+          <div className="mx-auto max-w-[560px] rounded-t-[22px] border border-gray-300 border-b-0 bg-gray-100/95 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur-sm">
             <div className="grid grid-cols-5 items-center px-1 py-2">
               <Link
                 to="/"
@@ -744,6 +816,26 @@ export default function AdminLayout({
                 <span className="text-xs mt-1 font-medium">More</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isSigningOut && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-blue-950/45 backdrop-blur-sm"></div>
+
+          <div className="relative w-full max-w-sm rounded-3xl border border-white/20 bg-white/95 shadow-2xl p-7 text-center">
+            <div className="mx-auto mb-4 relative w-16 h-16 flex items-center justify-center">
+              <span className="absolute inset-0 rounded-full border-4 border-blue-100"></span>
+              <span className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 border-r-blue-500 animate-spin"></span>
+              <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+            </div>
+            <h3 className="text-lg font-black text-gray-900 tracking-tight">
+              Signing you out securely
+            </h3>
+            <p className="mt-1.5 text-sm text-gray-500 font-medium">
+              Closing your session and returning to login...
+            </p>
           </div>
         </div>
       )}

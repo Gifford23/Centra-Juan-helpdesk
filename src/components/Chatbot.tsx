@@ -1,6 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { X, Phone, Mail, Globe, MapPin, ExternalLink, Bot } from "lucide-react";
+import {
+  X,
+  Phone,
+  Mail,
+  Globe,
+  MapPin,
+  ExternalLink,
+  Bot,
+  RotateCcw,
+  Clock3,
+} from "lucide-react";
 import botIcon from "../assets/icons/bot.png";
 
 type Message = {
@@ -9,16 +19,19 @@ type Message = {
   content: React.ReactNode;
 };
 
+const initialMessages: Message[] = [
+  {
+    id: 1,
+    sender: "bot",
+    content:
+      "Hello! Welcome to Central Juan IT Solutions. 👋 How can I assist you today?",
+  },
+];
+
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      sender: "bot",
-      content:
-        "Hello! Welcome to Central Juan IT Solutions. 👋 How can I assist you today?",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -28,6 +41,8 @@ export default function Chatbot() {
 
   // Handle User Clicks on Options
   const handleOptionClick = (option: string) => {
+    if (isTyping) return;
+
     // 1. Add user's message to chat
     const userMsg: Message = {
       id: Date.now(),
@@ -35,6 +50,7 @@ export default function Chatbot() {
       content: option,
     };
     setMessages((prev) => [...prev, userMsg]);
+    setIsTyping(true);
 
     // 2. Simulate typing delay, then add bot's response
     setTimeout(() => {
@@ -137,6 +153,47 @@ export default function Chatbot() {
             </div>
           );
           break;
+        case "Service Pricing":
+          botResponse = (
+            <div className="flex flex-col gap-2 text-sm">
+              <p className="font-medium text-gray-800">
+                Pricing depends on your device type and diagnosis.
+              </p>
+              <p className="text-gray-700">
+                For accurate rates, please submit a ticket or contact us
+                directly so our team can give you an estimate.
+              </p>
+              <Link
+                to="/submit-ticket"
+                onClick={() => setIsOpen(false)}
+                className="inline-flex items-center justify-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-lg font-bold text-xs mt-1 hover:bg-blue-700 transition-colors w-fit"
+              >
+                Get an Estimate <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          );
+          break;
+        case "Talk to a Human":
+          botResponse = (
+            <div className="flex flex-col gap-2 text-sm">
+              <p className="font-medium text-gray-800">
+                A support specialist can assist you right away:
+              </p>
+              <a
+                href="tel:09561793754"
+                className="inline-flex items-center gap-2 text-blue-600 hover:underline font-medium"
+              >
+                <Phone className="w-3.5 h-3.5" /> Call 0956-179-3754
+              </a>
+              <a
+                href="mailto:centraljuan.net@gmail.com"
+                className="inline-flex items-center gap-2 text-blue-600 hover:underline font-medium break-all"
+              >
+                <Mail className="w-3.5 h-3.5" /> centraljuan.net@gmail.com
+              </a>
+            </div>
+          );
+          break;
         default:
           botResponse =
             "I'm sorry, I didn't understand that. Please select an option below.";
@@ -148,7 +205,13 @@ export default function Chatbot() {
         content: botResponse,
       };
       setMessages((prev) => [...prev, botMsg]);
+      setIsTyping(false);
     }, 600); // 600ms delay to feel natural
+  };
+
+  const handleResetChat = () => {
+    setMessages(initialMessages);
+    setIsTyping(false);
   };
 
   return (
@@ -177,7 +240,7 @@ export default function Chatbot() {
             <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
               <Bot className="w-6 h-6 text-white" />
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <h3 className="font-bold text-white leading-tight">
                 Central Juan Assistant
               </h3>
@@ -186,6 +249,13 @@ export default function Chatbot() {
                 Online
               </p>
             </div>
+            <button
+              onClick={handleResetChat}
+              className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors"
+              title="Reset conversation"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Reset
+            </button>
           </div>
 
           {/* Messages Area */}
@@ -206,6 +276,18 @@ export default function Chatbot() {
                 </div>
               </div>
             ))}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm bg-white border border-gray-100 text-gray-800 shadow-sm rounded-tl-sm">
+                  <div className="flex items-center gap-2 text-gray-500">
+                    <Clock3 className="w-3.5 h-3.5" />
+                    <span className="text-xs font-semibold">
+                      Assistant is typing...
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
@@ -216,27 +298,45 @@ export default function Chatbot() {
             </p>
             <button
               onClick={() => handleOptionClick("Track a Repair")}
+              disabled={isTyping}
               className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg transition-colors border border-blue-100"
             >
               Track Repair
             </button>
             <button
               onClick={() => handleOptionClick("Submit a Ticket")}
+              disabled={isTyping}
               className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg transition-colors border border-blue-100"
             >
               Submit Ticket
             </button>
             <button
               onClick={() => handleOptionClick("Contact Information")}
+              disabled={isTyping}
               className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg transition-colors border border-blue-100"
             >
               Contact Info
             </button>
             <button
               onClick={() => handleOptionClick("Location & Hours")}
+              disabled={isTyping}
               className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg transition-colors border border-blue-100"
             >
               Location & Hours
+            </button>
+            <button
+              onClick={() => handleOptionClick("Service Pricing")}
+              disabled={isTyping}
+              className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg transition-colors border border-blue-100"
+            >
+              Pricing
+            </button>
+            <button
+              onClick={() => handleOptionClick("Talk to a Human")}
+              disabled={isTyping}
+              className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg transition-colors border border-blue-100"
+            >
+              Talk to Human
             </button>
           </div>
         </div>

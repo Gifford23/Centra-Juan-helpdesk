@@ -28,7 +28,8 @@ export default function SubmitTicket() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successTrackingId, setSuccessTrackingId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [isCopied, setIsCopied] = useState(false);
+  const [showCopySuccessModal, setShowCopySuccessModal] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
 
   // Image Upload State
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -188,14 +189,19 @@ export default function SubmitTicket() {
   };
 
   const handleCopyTrackingId = async () => {
-    if (!successTrackingId) return;
+    if (!successTrackingId || isCopying) return;
 
     try {
+      setIsCopying(true);
       await navigator.clipboard.writeText(successTrackingId);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 1800);
+
+      // Keep the loader briefly visible for clearer action feedback.
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setShowCopySuccessModal(true);
     } catch (error) {
       console.error("Failed to copy tracking ID:", error);
+    } finally {
+      setIsCopying(false);
     }
   };
 
@@ -299,20 +305,16 @@ export default function SubmitTicket() {
                 </p>
                 <button
                   onClick={handleCopyTrackingId}
-                  className={`absolute top-4 right-4 p-2 rounded-lg transition-colors ${
-                    isCopied
-                      ? "text-emerald-600 bg-emerald-50"
-                      : "text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                  }`}
-                  title={isCopied ? "Successfully copied!" : "Copy ID"}
+                  disabled={isCopying}
+                  className="absolute top-4 right-4 p-2 rounded-lg transition-colors text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                  title={isCopying ? "Copying..." : "Copy ID"}
                 >
-                  <Copy className="w-5 h-5" />
+                  {isCopying ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Copy className="w-5 h-5" />
+                  )}
                 </button>
-                {isCopied && (
-                  <p className="text-xs text-emerald-600 font-bold mt-2">
-                    Successfully copied!
-                  </p>
-                )}
               </div>
 
               <div className="flex gap-4 w-full max-w-sm">
@@ -329,6 +331,34 @@ export default function SubmitTicket() {
                   Submit Another
                 </button>
               </div>
+
+              {showCopySuccessModal && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                  <div
+                    className="absolute inset-0 bg-slate-900/45 backdrop-blur-sm"
+                    onClick={() => setShowCopySuccessModal(false)}
+                  ></div>
+
+                  <div className="relative bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200 text-center">
+                    <div className="mx-auto w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
+                      <img src={check2} alt="Copied" className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-xl font-black text-gray-900 mb-1">
+                      Successfully Copied
+                    </h3>
+                    <p className="text-sm text-gray-500 font-medium mb-6">
+                      Your tracking ID has been copied to clipboard.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowCopySuccessModal(false)}
+                      className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors"
+                    >
+                      OK
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             /* SUBMISSION FORM */

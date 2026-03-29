@@ -21,6 +21,8 @@ export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showLoginSuccessModal, setShowLoginSuccessModal] = useState(false);
+  const [loggedInUserName, setLoggedInUserName] = useState("");
   const [error, setError] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -152,8 +154,9 @@ export default function AdminLogin() {
         details: `${data.role || "User"} signed in successfully.`,
       });
 
-      // Navigate to the Dashboard
-      navigate("/");
+      setLoggedInUserName(data.full_name || data.email || "User");
+      setShowLoginSuccessModal(true);
+      setPassword("");
     } catch (err: unknown) {
       console.error("Login Error:", err);
       setError(
@@ -193,7 +196,7 @@ export default function AdminLogin() {
       </div>
 
       <div className="relative z-10 mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white/90 backdrop-blur-xl py-8 px-4 shadow-2xl shadow-blue-900/20 sm:rounded-[24px] sm:px-10 border border-white">
+        <div className="bg-white/90 backdrop-blur-xl py-8 px-4 shadow-2xl shadow-blue-900/20 rounded-2xl sm:rounded-[24px] sm:px-10 border border-white">
           <form className="space-y-6" onSubmit={handleLogin}>
             {/* Error Message Display */}
             {error && (
@@ -479,6 +482,61 @@ export default function AdminLogin() {
                 className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors"
               >
                 OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-blue-950/45 backdrop-blur-sm"></div>
+
+          <div className="relative w-full max-w-sm rounded-3xl border border-white/20 bg-white/95 shadow-2xl p-7 text-center">
+            <div className="mx-auto mb-4 relative w-16 h-16 flex items-center justify-center">
+              <span className="absolute inset-0 rounded-full border-4 border-blue-100"></span>
+              <span className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 border-r-blue-500 animate-spin"></span>
+              <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+            </div>
+            <h3 className="text-lg font-black text-gray-900 tracking-tight">
+              Signing you in securely
+            </h3>
+            <p className="mt-1.5 text-sm text-gray-500 font-medium">
+              Verifying your credentials and preparing your dashboard...
+            </p>
+          </div>
+        </div>
+      )}
+
+      {showLoginSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-blue-950/45 backdrop-blur-sm"></div>
+
+          <div className="relative w-full max-w-md bg-white rounded-2xl border border-gray-100 shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-gray-900 tracking-tight">
+                  Login Successful
+                </h3>
+                <p className="text-sm text-gray-500 font-medium mt-0.5">
+                  Welcome back, {loggedInUserName}. Your session is now active.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLoginSuccessModal(false);
+                  navigate("/");
+                }}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors"
+              >
+                Continue
               </button>
             </div>
           </div>
