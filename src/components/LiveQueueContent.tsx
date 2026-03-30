@@ -25,7 +25,10 @@ interface JobOrderRow {
   assigned_tech: string | null;
   status: string;
   priority: string | null;
-  customers: { full_name: string } | { full_name: string }[] | null;
+  customers:
+    | { full_name: string; avatar_url?: string | null }
+    | { full_name: string; avatar_url?: string | null }[]
+    | null;
 }
 
 interface QueueItem {
@@ -33,6 +36,7 @@ interface QueueItem {
   date: string;
   createdAt: string;
   customer: string;
+  customerAvatarUrl: string | null;
   device: string;
   tech: string;
   status: string;
@@ -98,7 +102,7 @@ export default function LiveQueueContent() {
           assigned_tech,
           status,
           priority,
-          customers ( full_name )
+          customers ( full_name, avatar_url )
         `,
         )
         .order("created_at", { ascending: false });
@@ -113,9 +117,12 @@ export default function LiveQueueContent() {
       if (data) {
         const formattedData: QueueItem[] = (data as JobOrderRow[]).map(
           (job) => {
-            const customerName = Array.isArray(job.customers)
-              ? job.customers[0]?.full_name
-              : job.customers?.full_name;
+            const customerData = Array.isArray(job.customers)
+              ? job.customers[0]
+              : job.customers;
+
+            const customerName = customerData?.full_name;
+            const customerAvatarUrl = customerData?.avatar_url || null;
 
             return {
               id: job.job_order_no.toString(),
@@ -126,6 +133,7 @@ export default function LiveQueueContent() {
               }),
               createdAt: job.created_at,
               customer: customerName || "Unknown Customer",
+              customerAvatarUrl,
               device: `${job.brand} ${job.model}`,
               tech: job.assigned_tech || "Unassigned",
               status: job.status,
@@ -511,9 +519,17 @@ export default function LiveQueueContent() {
 
                   <div className="mt-3 space-y-2">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 flex items-center justify-center text-[11px] font-bold ring-1 ring-gray-200">
-                        {getInitials(job.customer)}
-                      </div>
+                      {job.customerAvatarUrl ? (
+                        <img
+                          src={job.customerAvatarUrl}
+                          alt={job.customer}
+                          className="w-7 h-7 rounded-full object-cover ring-1 ring-gray-200"
+                        />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 flex items-center justify-center text-[11px] font-bold ring-1 ring-gray-200">
+                          {getInitials(job.customer)}
+                        </div>
+                      )}
                       <p className="text-sm font-bold text-gray-800 truncate">
                         {job.customer}
                       </p>
@@ -625,9 +641,17 @@ export default function LiveQueueContent() {
                       </td>
                       <td className="px-4 sm:px-7 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 flex items-center justify-center text-xs font-bold ring-1 ring-gray-200">
-                            {getInitials(job.customer)}
-                          </div>
+                          {job.customerAvatarUrl ? (
+                            <img
+                              src={job.customerAvatarUrl}
+                              alt={job.customer}
+                              className="w-8 h-8 rounded-full object-cover ring-1 ring-gray-200"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 flex items-center justify-center text-xs font-bold ring-1 ring-gray-200">
+                              {getInitials(job.customer)}
+                            </div>
+                          )}
                           <span className="text-sm font-bold text-gray-800">
                             {job.customer}
                           </span>

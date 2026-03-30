@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   List,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { logSystemAction } from "../utils/auditLog";
 
@@ -726,8 +727,22 @@ function KanbanCard({
   isSuperAdmin: boolean;
   actorName: string;
 }) {
+  const navigate = useNavigate();
+
   return (
-    <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-[0_8px_18px_rgba(15,23,42,0.05)] hover:shadow-[0_14px_24px_rgba(30,64,175,0.12)] hover:border-blue-300 transition-all group relative">
+    <div
+      className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-[0_8px_18px_rgba(15,23,42,0.05)] hover:shadow-[0_14px_24px_rgba(30,64,175,0.12)] hover:border-blue-300 transition-all group relative cursor-pointer"
+      onClick={() => navigate(`/job-orders/${job.id}`)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          navigate(`/job-orders/${job.id}`);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`View job order #${job.id}`}
+    >
       {job.priority === "High" && (
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500 rounded-l-xl"></div>
       )}
@@ -966,7 +981,10 @@ function ActionMenu({
   };
 
   return (
-    <div className="relative inline-block text-left">
+    <div
+      className="relative inline-block text-left"
+      onClick={(e) => e.stopPropagation()}
+    >
       {isUpdating && (
         <div className="absolute -inset-4 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-xl">
           <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
