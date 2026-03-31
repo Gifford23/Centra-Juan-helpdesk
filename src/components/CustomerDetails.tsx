@@ -87,7 +87,7 @@ export default function CustomerDetails() {
   // Helper for Status Badge styling
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "Pending Drop-off":
+      case "Pending":
       case "Received":
         return "bg-blue-50 text-blue-700 border-blue-200/60";
       case "Diagnosing":

@@ -14,6 +14,7 @@ import {
   Activity,
   Menu,
   X,
+  Receipt,
   Loader2,
 } from "lucide-react";
 import technician from "../assets/technician.png";
@@ -395,6 +396,16 @@ export default function AdminLayout({
             <ClipboardList className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Job Orders
+            </span>
+          </Link>
+
+          <Link
+            to="/quotations"
+            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/quotations" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
+          >
+            <Receipt className="w-5 h-5 flex-shrink-0" />
+            <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              Billing & Quotes
             </span>
           </Link>
 

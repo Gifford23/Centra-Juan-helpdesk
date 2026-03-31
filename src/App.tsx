@@ -14,6 +14,7 @@ import PersonnelDetails from "./components/PersonnelDetails";
 import SystemLogsContent from "./components/SystemLogsContent";
 import JobOrderDetails from "./components/JobOrderDetails";
 import TermsAndConditions from "./components/TermsAndConditions";
+import QuotationsContent from "./components/QuotationsContent";
 
 // --- NEW CUSTOMER PORTAL IMPORTS ---
 import CustomerLogin from "./components/CustomerLogin";
@@ -106,6 +107,16 @@ export default function App() {
             <ProtectedRoute>
               <AdminLayout>
                 <JobOrderDetails />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/quotations"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <QuotationsContent />
               </AdminLayout>
             </ProtectedRoute>
           }

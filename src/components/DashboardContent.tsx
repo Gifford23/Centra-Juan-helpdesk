@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import CreateJobModal from "./CreateJobModal";
-import { Plus, Loader2, Eye, X, LayoutGrid, Cloud } from "lucide-react";
+import { Plus, Loader2, Eye, X, LayoutGrid } from "lucide-react";
 import checkIcon from "../assets/icons/check.png";
 import warningIcon from "../assets/icons/warning.png";
 import tools from "../assets/icons/tools.png";
 import pending from "../assets/icons/pending.gif";
+import morningGif from "../assets/gif/morning.gif";
+import noonGif from "../assets/gif/noon.gif";
+import eveningGif from "../assets/gif/evening.gif";
 import { supabase } from "../lib/supabase";
 import {
   BarChart,
@@ -115,6 +118,9 @@ export default function DashboardContent() {
     day: "numeric",
     year: "numeric",
   });
+
+  const greetingIcon =
+    currentHour < 12 ? morningGif : currentHour < 18 ? noonGif : eveningGif;
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 640);
@@ -427,11 +433,15 @@ export default function DashboardContent() {
               <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight truncate">
                 {greeting},{" "}
                 <span className="text-blue-600">{firstName || "Team"}</span>
-                <Cloud className="inline-block w-5 h-5 sm:w-6 sm:h-6 text-sky-500 ml-2 -mt-1" />
+                <img
+                  src={greetingIcon}
+                  alt={`${greeting} icon`}
+                  className="inline-block w-8 h-8 sm:w-9 sm:h-9 ml-2 -mt-1 object-contain"
+                />
               </h1>
 
               <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-                <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-1 font-bold uppercase tracking-wide text-blue-700">
+                <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-0.5 text-[10px] font-semibold text-blue-700">
                   General Operations Manager
                 </span>
                 <span className="text-gray-300">•</span>
