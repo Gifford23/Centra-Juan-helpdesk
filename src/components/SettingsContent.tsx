@@ -13,7 +13,6 @@ import {
   ShieldCheck,
   Wrench,
   Loader2,
-  CheckCircle2,
   AlertCircle,
   Globe,
   Settings as SettingsIcon,
@@ -21,6 +20,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { logSystemAction } from "../utils/auditLog";
+import SettingsSuccessDialog from "./settings/SettingsSuccessDialog";
 
 export default function SettingsContent() {
   type NotificationSettings = {
@@ -42,7 +42,6 @@ export default function SettingsContent() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
-  const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [showProfileSuccessDialog, setShowProfileSuccessDialog] =
     useState(false);
@@ -60,21 +59,23 @@ export default function SettingsContent() {
   const savedUser = JSON.parse(
     localStorage.getItem("central_juan_user") || "{}",
   );
-  const isSuperAdmin = savedUser.role === "Super Admin";
+  const [currentUser, setCurrentUser] = useState(savedUser);
+  const isSuperAdmin = currentUser.role === "Super Admin";
 
   // State for Personal Form Inputs
   const [formData, setFormData] = useState({
-    fullName: savedUser.full_name || "",
-    email: savedUser.email || "",
+    fullName: currentUser.full_name || "",
+    email: currentUser.email || "",
     password: "",
   });
 
   // State for Avatar Upload
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(
-    savedUser.avatar_url || null,
+    currentUser.avatar_url || null,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const localObjectUrlRef = useRef<string | null>(null);
 
   // State for Global System Settings
   const [systemSettingsId, setSystemSettingsId] = useState<number | null>(null);
@@ -103,8 +104,59 @@ export default function SettingsContent() {
     enable2FA: false,
   });
 
-  const advancedSettingsStorageKey = `central_juan_advanced_settings_${savedUser?.id || "default"}`;
+  const advancedSettingsStorageKey = `central_juan_advanced_settings_${currentUser?.id || "default"}`;
   const submissionHoursStorageKey = "central_juan_submission_hours";
+
+  useEffect(() => {
+    const syncUser = () => {
+      const updated = JSON.parse(
+        localStorage.getItem("central_juan_user") || "{}",
+      );
+      setCurrentUser(updated);
+      setFormData((prev) => ({
+        ...prev,
+        fullName: updated.full_name || "",
+        email: updated.email || "",
+      }));
+      setAvatarPreview(updated.avatar_url || null);
+    };
+
+    const handleUserUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail) {
+        setCurrentUser(customEvent.detail);
+        setFormData((prev) => ({
+          ...prev,
+          fullName: customEvent.detail.full_name || "",
+          email: customEvent.detail.email || "",
+        }));
+        setAvatarPreview(customEvent.detail.avatar_url || null);
+        return;
+      }
+      syncUser();
+    };
+
+    window.addEventListener("storage", syncUser);
+    window.addEventListener("central_juan_user_updated", handleUserUpdated);
+
+    return () => {
+      window.removeEventListener("storage", syncUser);
+      window.removeEventListener(
+        "central_juan_user_updated",
+        handleUserUpdated,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    setErrorMessage("");
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!isSuperAdmin && (activeTab === "security" || activeTab === "system")) {
+      setActiveTab("account");
+    }
+  }, [activeTab, isSuperAdmin]);
 
   // Fetch Global Settings on Load
   useEffect(() => {
@@ -188,10 +240,23 @@ export default function SettingsContent() {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      if (localObjectUrlRef.current) {
+        URL.revokeObjectURL(localObjectUrlRef.current);
+      }
+      const objectUrl = URL.createObjectURL(file);
+      localObjectUrlRef.current = objectUrl;
       setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file)); // Show instant preview
+      setAvatarPreview(objectUrl); // Show instant preview
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (localObjectUrlRef.current) {
+        URL.revokeObjectURL(localObjectUrlRef.current);
+      }
+    };
+  }, []);
 
   const getErrorMessage = (error: unknown, fallback: string) => {
     if (error instanceof Error && error.message) return error.message;
@@ -202,15 +267,14 @@ export default function SettingsContent() {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage("");
-    setSuccessMessage("");
 
     try {
       // 1. UPLOAD NEW AVATAR (If a new one was selected)
-      let newAvatarUrl = savedUser.avatar_url; // Keep current if no new file
+      let newAvatarUrl = currentUser.avatar_url; // Keep current if no new file
 
       if (avatarFile) {
         const fileExt = avatarFile.name.split(".").pop();
-        const fileName = `${savedUser.id}-${Date.now()}.${fileExt}`;
+        const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from("avatars")
@@ -245,7 +309,7 @@ export default function SettingsContent() {
       const { error: profileError } = await supabase
         .from("personnel")
         .update(updatePayload)
-        .eq("id", savedUser.id);
+        .eq("id", currentUser.id);
 
       if (profileError) {
         if (profileError.code === "23505")
@@ -254,8 +318,9 @@ export default function SettingsContent() {
       }
 
       // Update local storage so UI syncs
-      const updatedUser = { ...savedUser, ...updatePayload };
+      const updatedUser = { ...currentUser, ...updatePayload };
       localStorage.setItem("central_juan_user", JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
       window.dispatchEvent(
         new CustomEvent("central_juan_user_updated", {
           detail: updatedUser,
@@ -263,12 +328,13 @@ export default function SettingsContent() {
       );
 
       await logSystemAction({
-        userName: savedUser?.full_name || "Unknown User",
+        userName: currentUser?.full_name || "Unknown User",
         action: "Updated account settings",
         details: "Updated personal profile information.",
       });
 
       setShowProfileSuccessDialog(true);
+      setAvatarFile(null);
       setFormData({ ...formData, password: "" }); // Clear password field
     } catch (error: unknown) {
       console.error("Error updating settings:", error);
@@ -286,10 +352,10 @@ export default function SettingsContent() {
 
     setIsLoading(true);
     setErrorMessage("");
-    setSuccessMessage("");
 
     if (submissionHours.start >= submissionHours.end) {
       setErrorMessage("Submission start time must be earlier than end time.");
+      setIsLoading(false);
       return;
     }
 
@@ -320,7 +386,7 @@ export default function SettingsContent() {
       );
 
       await logSystemAction({
-        userName: savedUser?.full_name || "Unknown User",
+        userName: currentUser?.full_name || "Unknown User",
         action: "Updated system settings",
         details: `Set public ticket portal to ${allowPublicTickets ? "enabled" : "disabled"}. Allowed submission hours: ${submissionHours.start} - ${submissionHours.end}. Auto-assign: ${autoAssignRule}. Backup reminders: ${backupReminderFrequency}.`,
       });
@@ -343,7 +409,6 @@ export default function SettingsContent() {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage("");
-    setSuccessMessage("");
 
     try {
       if (
@@ -361,7 +426,7 @@ export default function SettingsContent() {
       );
 
       await logSystemAction({
-        userName: savedUser?.full_name || "Unknown User",
+        userName: currentUser?.full_name || "Unknown User",
         action: "Updated notification settings",
         details: `Updated alerts: sound ${notificationSettings.newTicketSound ? "on" : "off"}, browser ${notificationSettings.browserNotifications ? "on" : "off"}, digest ${notificationSettings.emailDigest}, escalation ${notificationSettings.escalationAlerts ? "on" : "off"}.`,
       });
@@ -384,7 +449,6 @@ export default function SettingsContent() {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage("");
-    setSuccessMessage("");
 
     try {
       localStorage.setItem(
@@ -393,7 +457,7 @@ export default function SettingsContent() {
       );
 
       await logSystemAction({
-        userName: savedUser?.full_name || "Unknown User",
+        userName: currentUser?.full_name || "Unknown User",
         action: "Updated security settings",
         details: `Password min ${securitySettings.minPasswordLength}, complexity ${securitySettings.requireComplexity ? "required" : "not required"}, timeout ${securitySettings.sessionTimeoutMinutes}m, 2FA ${securitySettings.enable2FA ? "enabled" : "disabled"}.`,
       });
@@ -415,18 +479,17 @@ export default function SettingsContent() {
   const handleForceLogoutAllSessions = async () => {
     setIsLoading(true);
     setErrorMessage("");
-    setSuccessMessage("");
     try {
       const timestamp = new Date().toISOString();
       localStorage.setItem("central_juan_force_logout_all", timestamp);
       window.dispatchEvent(
         new CustomEvent("central_juan_force_logout_all", {
-          detail: { requestedAt: timestamp, requestedBy: savedUser?.id },
+          detail: { requestedAt: timestamp, requestedBy: currentUser?.id },
         }),
       );
 
       await logSystemAction({
-        userName: savedUser?.full_name || "Unknown User",
+        userName: currentUser?.full_name || "Unknown User",
         action: "Triggered force logout signal",
         details: "Sent force logout signal for all active sessions.",
       });
@@ -455,17 +518,17 @@ export default function SettingsContent() {
   }
 
   return (
-    <div className="relative space-y-6 animate-in fade-in duration-500 max-w-5xl mx-auto">
+    <div className="relative space-y-5 sm:space-y-6 animate-in fade-in duration-500 max-w-5xl mx-auto">
       <div className="pointer-events-none absolute -top-16 -left-20 h-56 w-56 rounded-full bg-blue-200/30 blur-3xl" />
       <div className="pointer-events-none absolute top-24 -right-16 h-64 w-64 rounded-full bg-indigo-200/30 blur-3xl" />
 
       {/* Page Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50 to-blue-50/60 p-6 sm:p-8 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+      <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50 to-blue-50/60 p-5 sm:p-8 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
         <div className="absolute -top-16 -right-10 h-40 w-40 rounded-full bg-blue-300/20 blur-2xl" />
         <div className="absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-indigo-300/20 blur-2xl" />
 
-        <div className="relative flex items-start gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-500 text-white shadow-[0_10px_26px_rgba(59,130,246,0.35)] flex items-center justify-center flex-shrink-0">
+        <div className="relative flex items-start gap-3 sm:gap-4">
+          <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-500 text-white shadow-[0_10px_26px_rgba(59,130,246,0.35)] flex items-center justify-center flex-shrink-0">
             <SettingsIcon className="w-6 h-6" />
           </div>
 
@@ -473,7 +536,7 @@ export default function SettingsContent() {
             <p className="text-[11px] font-black uppercase tracking-[0.14em] text-blue-600 mb-1">
               Control Center
             </p>
-            <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
               Account Settings
             </h1>
             <p className="text-slate-600 text-sm mt-1 font-medium max-w-2xl">
@@ -484,11 +547,11 @@ export default function SettingsContent() {
         </div>
       </div>
 
-      <div className="bg-white/90 backdrop-blur rounded-2xl border border-slate-200 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-2 flex flex-wrap gap-2 w-full sm:w-fit">
+      <div className="bg-white/90 backdrop-blur rounded-2xl border border-slate-200 shadow-[0_8px_24px_rgba(15,23,42,0.06)] p-2 flex gap-2 w-full sm:w-fit overflow-x-auto">
         <button
           type="button"
           onClick={() => setActiveTab("account")}
-          className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+          className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${
             activeTab === "account"
               ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25"
               : "text-gray-600 hover:bg-slate-50"
@@ -499,7 +562,7 @@ export default function SettingsContent() {
         <button
           type="button"
           onClick={() => setActiveTab("notifications")}
-          className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+          className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${
             activeTab === "notifications"
               ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25"
               : "text-gray-600 hover:bg-slate-50"
@@ -511,7 +574,7 @@ export default function SettingsContent() {
           <button
             type="button"
             onClick={() => setActiveTab("security")}
-            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${
               activeTab === "security"
                 ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25"
                 : "text-gray-600 hover:bg-slate-50"
@@ -524,7 +587,7 @@ export default function SettingsContent() {
           <button
             type="button"
             onClick={() => setActiveTab("system")}
-            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${
               activeTab === "system"
                 ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25"
                 : "text-gray-600 hover:bg-slate-50"
@@ -535,29 +598,29 @@ export default function SettingsContent() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-8">
         {/* LEFT COLUMN: Profile Summary Card */}
         <div className="lg:col-span-1">
-          <div className="relative overflow-hidden bg-white rounded-3xl border border-slate-200 shadow-[0_16px_38px_rgba(15,23,42,0.08)] p-6 text-center lg:sticky lg:top-24">
+          <div className="relative overflow-hidden bg-white rounded-3xl border border-slate-200 shadow-[0_16px_38px_rgba(15,23,42,0.08)] p-4 sm:p-6 text-center lg:sticky lg:top-24">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r from-blue-50 to-indigo-50" />
 
             {/* CLICKABLE AVATAR UPLOAD */}
             <div
-              className="relative w-24 h-24 mx-auto mb-2 group cursor-pointer z-10"
+              className="relative w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-2 group cursor-pointer z-10"
               onClick={() => fileInputRef.current?.click()}
             >
               {avatarPreview ? (
                 <img
                   src={avatarPreview}
                   alt="Profile"
-                  className="w-24 h-24 rounded-full object-cover shadow-lg border-4 border-white ring-2 ring-blue-100"
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover shadow-lg border-4 border-white ring-2 ring-blue-100"
                 />
               ) : (
                 <div
-                  className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center font-black text-4xl shadow-lg text-white border-4 border-white ring-2 ring-blue-100 ${savedUser.role === "Super Admin" ? "bg-gradient-to-tr from-indigo-600 to-indigo-400 shadow-indigo-500/20" : "bg-gradient-to-tr from-blue-600 to-blue-400 shadow-blue-500/20"}`}
+                  className={`w-20 h-20 sm:w-24 sm:h-24 mx-auto rounded-full flex items-center justify-center font-black text-3xl sm:text-4xl shadow-lg text-white border-4 border-white ring-2 ring-blue-100 ${currentUser.role === "Super Admin" ? "bg-gradient-to-tr from-indigo-600 to-indigo-400 shadow-indigo-500/20" : "bg-gradient-to-tr from-blue-600 to-blue-400 shadow-blue-500/20"}`}
                 >
-                  {savedUser?.full_name
-                    ? savedUser.full_name.charAt(0).toUpperCase()
+                  {currentUser?.full_name
+                    ? currentUser.full_name.charAt(0).toUpperCase()
                     : "U"}
                 </div>
               )}
@@ -581,21 +644,21 @@ export default function SettingsContent() {
             </p>
 
             <h2 className="text-xl font-black text-gray-900 tracking-tight">
-              {savedUser.full_name}
+              {currentUser.full_name}
             </h2>
             <p className="text-sm text-gray-500 font-medium mb-4">
-              {savedUser.email}
+              {currentUser.email}
             </p>
 
             <div
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border ${savedUser.role === "Super Admin" ? "bg-indigo-50 text-indigo-700 border-indigo-100" : "bg-blue-50 text-blue-700 border-blue-100"}`}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border ${currentUser.role === "Super Admin" ? "bg-indigo-50 text-indigo-700 border-indigo-100" : "bg-blue-50 text-blue-700 border-blue-100"}`}
             >
-              {savedUser.role === "Super Admin" ? (
+              {currentUser.role === "Super Admin" ? (
                 <ShieldCheck className="w-4 h-4" />
               ) : (
                 <Wrench className="w-4 h-4" />
               )}
-              {savedUser.role}
+              {currentUser.role}
             </div>
 
             <div className="mt-6 pt-6 border-t border-slate-100 text-left">
@@ -605,7 +668,7 @@ export default function SettingsContent() {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                 <span className="text-sm font-bold text-gray-900">
-                  {savedUser.status}
+                  {currentUser.status}
                 </span>
               </div>
             </div>
@@ -617,7 +680,7 @@ export default function SettingsContent() {
           {activeTab === "account" && (
             <form onSubmit={handleSaveProfile}>
               <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_16px_38px_rgba(15,23,42,0.08)] overflow-hidden mb-6">
-                <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-blue-50/40 flex items-center gap-3">
+                <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-blue-50/40 flex items-center gap-3">
                   <User className="w-5 h-5 text-gray-500" />
                   <div>
                     <h3 className="text-lg font-bold text-gray-900">
@@ -629,7 +692,7 @@ export default function SettingsContent() {
                   </div>
                 </div>
 
-                <div className="p-6 space-y-5">
+                <div className="p-4 sm:p-6 space-y-5">
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1.5">
                       Full Name
@@ -700,7 +763,7 @@ export default function SettingsContent() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.07)] p-6 flex flex-col gap-4">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.07)] p-4 sm:p-6 flex flex-col gap-4">
                 {errorMessage && (
                   <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 flex-shrink-0" />{" "}
@@ -726,7 +789,7 @@ export default function SettingsContent() {
           {activeTab === "notifications" && (
             <form onSubmit={handleSaveNotificationSettings}>
               <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_16px_38px_rgba(15,23,42,0.08)] overflow-hidden mb-6">
-                <div className="px-6 py-5 border-b border-blue-100/70 bg-gradient-to-r from-blue-50 to-indigo-50/60 flex items-center gap-3">
+                <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-blue-100/70 bg-gradient-to-r from-blue-50 to-indigo-50/60 flex items-center gap-3">
                   <Bell className="w-5 h-5 text-blue-600" />
                   <div>
                     <h3 className="text-lg font-bold text-gray-900">
@@ -738,7 +801,7 @@ export default function SettingsContent() {
                   </div>
                 </div>
 
-                <div className="p-6 space-y-5">
+                <div className="p-4 sm:p-6 space-y-5">
                   <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-slate-200 bg-slate-50">
                     <div>
                       <p className="text-sm font-bold text-slate-900">
@@ -839,7 +902,7 @@ export default function SettingsContent() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.07)] p-6 flex flex-col gap-4">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.07)] p-4 sm:p-6 flex flex-col gap-4">
                 {errorMessage && (
                   <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 flex-shrink-0" />{" "}
@@ -864,7 +927,7 @@ export default function SettingsContent() {
           {activeTab === "security" && isSuperAdmin && (
             <form onSubmit={handleSaveSecuritySettings}>
               <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_16px_38px_rgba(15,23,42,0.08)] overflow-hidden mb-6">
-                <div className="px-6 py-5 border-b border-indigo-100/70 bg-gradient-to-r from-indigo-50 to-slate-50/60 flex items-center gap-3">
+                <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-indigo-100/70 bg-gradient-to-r from-indigo-50 to-slate-50/60 flex items-center gap-3">
                   <Shield className="w-5 h-5 text-indigo-600" />
                   <div>
                     <h3 className="text-lg font-bold text-gray-900">
@@ -876,7 +939,7 @@ export default function SettingsContent() {
                   </div>
                 </div>
 
-                <div className="p-6 space-y-5">
+                <div className="p-4 sm:p-6 space-y-5">
                   <div className="p-4 rounded-xl border border-slate-200 bg-slate-50">
                     <label className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-2">
                       <KeyRound className="w-4 h-4 text-indigo-600" /> Password
@@ -993,7 +1056,7 @@ export default function SettingsContent() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.07)] p-6 flex flex-col gap-4">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.07)] p-4 sm:p-6 flex flex-col gap-4">
                 {errorMessage && (
                   <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 flex-shrink-0" />{" "}
@@ -1018,7 +1081,7 @@ export default function SettingsContent() {
           {activeTab === "system" && isSuperAdmin && (
             <form onSubmit={handleSaveSystemSettings}>
               <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_16px_38px_rgba(15,23,42,0.08)] overflow-hidden mb-6">
-                <div className="px-6 py-5 border-b border-indigo-100/70 bg-gradient-to-r from-indigo-50 to-blue-50/60 flex items-center gap-3">
+                <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-indigo-100/70 bg-gradient-to-r from-indigo-50 to-blue-50/60 flex items-center gap-3">
                   <SettingsIcon className="w-5 h-5 text-indigo-600" />
                   <div>
                     <h3 className="text-lg font-bold text-gray-900">
@@ -1030,7 +1093,7 @@ export default function SettingsContent() {
                   </div>
                 </div>
 
-                <div className="p-6 space-y-6">
+                <div className="p-4 sm:p-6 space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
                     <div className="flex gap-4">
                       <div
@@ -1201,17 +1264,11 @@ export default function SettingsContent() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.07)] p-6 flex flex-col gap-4">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.07)] p-4 sm:p-6 flex flex-col gap-4">
                 {errorMessage && (
                   <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 flex-shrink-0" />{" "}
                     {errorMessage}
-                  </div>
-                )}
-                {successMessage && (
-                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2 animate-in fade-in">
-                    <CheckCircle2 className="w-5 h-5 flex-shrink-0" />{" "}
-                    {successMessage}
                   </div>
                 )}
 
@@ -1232,141 +1289,33 @@ export default function SettingsContent() {
         </div>
       </div>
 
-      {showProfileSuccessDialog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
-            onClick={() => setShowProfileSuccessDialog(false)}
-          ></div>
-          <div className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-gray-900">
-                  Profile Updated
-                </h3>
-                <p className="text-sm text-gray-500 font-medium mt-0.5">
-                  Your profile changes were saved successfully!
-                </p>
-              </div>
-            </div>
+      <SettingsSuccessDialog
+        open={showProfileSuccessDialog}
+        title="Profile Updated"
+        message="Your profile changes were saved successfully!"
+        onClose={() => setShowProfileSuccessDialog(false)}
+      />
 
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowProfileSuccessDialog(false)}
-                className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SettingsSuccessDialog
+        open={showSystemSuccessDialog}
+        title="System Settings Updated"
+        message="System configuration was successfully updated!"
+        onClose={() => setShowSystemSuccessDialog(false)}
+      />
 
-      {showSystemSuccessDialog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
-            onClick={() => setShowSystemSuccessDialog(false)}
-          ></div>
-          <div className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-gray-900">
-                  System Settings Updated
-                </h3>
-                <p className="text-sm text-gray-500 font-medium mt-0.5">
-                  System configuration was successfully updated!
-                </p>
-              </div>
-            </div>
+      <SettingsSuccessDialog
+        open={showNotificationSuccessDialog}
+        title="Notification Settings Updated"
+        message="Your alert preferences were saved successfully."
+        onClose={() => setShowNotificationSuccessDialog(false)}
+      />
 
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowSystemSuccessDialog(false)}
-                className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showNotificationSuccessDialog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
-            onClick={() => setShowNotificationSuccessDialog(false)}
-          ></div>
-          <div className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-gray-900">
-                  Notification Settings Updated
-                </h3>
-                <p className="text-sm text-gray-500 font-medium mt-0.5">
-                  Your alert preferences were saved successfully.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowNotificationSuccessDialog(false)}
-                className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showSecuritySuccessDialog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
-            onClick={() => setShowSecuritySuccessDialog(false)}
-          ></div>
-          <div className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-gray-900">
-                  Security Settings Updated
-                </h3>
-                <p className="text-sm text-gray-500 font-medium mt-0.5">
-                  Security controls were saved successfully.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowSecuritySuccessDialog(false)}
-                className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SettingsSuccessDialog
+        open={showSecuritySuccessDialog}
+        title="Security Settings Updated"
+        message="Security controls were saved successfully."
+        onClose={() => setShowSecuritySuccessDialog(false)}
+      />
     </div>
   );
 }

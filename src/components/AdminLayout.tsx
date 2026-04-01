@@ -14,10 +14,11 @@ import {
   Activity,
   Menu,
   X,
-  Receipt,
   Loader2,
+  Wallet,
 } from "lucide-react";
 import technician from "../assets/technician.png";
+import quotationIcon from "../assets/icons/quotation.png";
 import tingSound from "../assets/sound/ting.mp3";
 import { supabase } from "../lib/supabase";
 import { logSystemAction } from "../utils/auditLog";
@@ -40,6 +41,7 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -356,11 +358,21 @@ export default function AdminLayout({
   ).length;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex font-sans overflow-x-hidden">
+    <div className="h-screen bg-[#F8FAFC] flex font-sans overflow-hidden">
       {/* ==========================================
           LEFT SIDEBAR (Collapse/Expand on Hover)
       ========================================== */}
       <aside
+        onMouseEnter={() => setIsSidebarExpanded(true)}
+        onMouseLeave={() => setIsSidebarExpanded(false)}
+        onFocusCapture={() => setIsSidebarExpanded(true)}
+        onBlurCapture={(event) => {
+          if (
+            !event.currentTarget.contains(event.relatedTarget as Node | null)
+          ) {
+            setIsSidebarExpanded(false);
+          }
+        }}
         className="fixed top-0 left-0 h-screen bg-blue-600 border-r border-blue-700 text-white z-50 
                       w-16 sm:w-20 md:hover:w-64 transition-all duration-300 ease-in-out group hidden md:flex
                       overflow-hidden flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]"
@@ -400,22 +412,36 @@ export default function AdminLayout({
           </Link>
 
           <Link
-            to="/quotations"
-            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/quotations" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
-          >
-            <Receipt className="w-5 h-5 flex-shrink-0" />
-            <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              Billing & Quotes
-            </span>
-          </Link>
-
-          <Link
             to="/queue"
             className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/queue" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
           >
             <Tickets className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Tickets
+            </span>
+          </Link>
+
+          <Link
+            to="/quotations"
+            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/quotations" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
+          >
+            <img
+              src={quotationIcon}
+              alt="Quotations"
+              className="w-5 h-5 flex-shrink-0 object-contain brightness-0 invert contrast-125 drop-shadow-[0_0_0.45px_rgba(255,255,255,0.95)]"
+            />
+            <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              Quotations
+            </span>
+          </Link>
+
+          <Link
+            to="/ar"
+            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/ar" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
+          >
+            <Wallet className="w-5 h-5 flex-shrink-0" />
+            <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              Accounts Receivable
             </span>
           </Link>
 
@@ -525,6 +551,18 @@ export default function AdminLayout({
               </Link>
 
               <Link
+                to="/quotations"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/quotations" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+              >
+                <img
+                  src={quotationIcon}
+                  alt="Quotations"
+                  className="w-5 h-5 flex-shrink-0 object-contain brightness-0 invert contrast-125 drop-shadow-[0_0_0.45px_rgba(255,255,255,0.95)]"
+                />
+                Quotations
+              </Link>
+
+              <Link
                 to="/customers"
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/customers" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
               >
@@ -595,7 +633,11 @@ export default function AdminLayout({
       {/* ==========================================
           MAIN CONTENT AREA 
       ========================================== */}
-      <div className="flex-1 w-full min-w-0 ml-0 md:ml-20 flex flex-col min-h-screen transition-all duration-300">
+      <div
+        className={`flex-1 w-full min-w-0 ml-0 flex flex-col h-screen transition-all duration-300 ${
+          isSidebarExpanded ? "md:ml-64" : "md:ml-20"
+        }`}
+      >
         {/* TOP NAVIGATION BAR (Glassmorphism Effect) */}
         <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between gap-2 px-3 sm:px-4 md:px-6 lg:px-8 sticky top-0 z-40 shadow-sm">
           <div className="flex-1 min-w-0 flex items-center">
@@ -776,7 +818,7 @@ export default function AdminLayout({
         </header>
 
         {/* PAGE CONTENT RENDERS HERE */}
-        <main className="p-3 pb-24 sm:p-5 sm:pb-24 md:pb-6 lg:p-8 flex-1 min-w-0">
+        <main className="p-3 pb-24 sm:p-5 sm:pb-24 md:pb-6 lg:p-8 flex-1 min-w-0 overflow-y-auto">
           {children}
         </main>
       </div>

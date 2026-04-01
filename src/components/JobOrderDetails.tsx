@@ -16,9 +16,12 @@ import {
   Clock3,
   Maximize2,
   X,
+  FileText,
+  CheckCircle2,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { printJobOrder } from "../utils/printJobOrder";
+import { printCSR } from "../utils/printCSR";
 import userIcon from "../assets/icons/user.png";
 
 interface CustomerMini {
@@ -43,6 +46,7 @@ interface JobOrderDetailsRow {
   complaint_notes?: string | null;
   visual_checks?: string | null;
   image_url?: string | null;
+  resolution_notes?: string | null;
   customers: CustomerMini | CustomerMini[] | null;
 }
 
@@ -56,6 +60,10 @@ export default function JobOrderDetails() {
     null,
   );
 
+  // Resolution Notes States
+  const [resolutionNotes, setResolutionNotes] = useState("");
+  const [isSavingResolution, setIsSavingResolution] = useState(false);
+
   const fetchJobDetails = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -66,7 +74,10 @@ export default function JobOrderDetails() {
         .single();
 
       if (error) throw error;
-      if (data) setJobData(data as JobOrderDetailsRow);
+      if (data) {
+        setJobData(data as JobOrderDetailsRow);
+        setResolutionNotes(data.resolution_notes || "");
+      }
     } catch (error) {
       console.error("Error fetching job details:", error);
     } finally {
@@ -77,6 +88,25 @@ export default function JobOrderDetails() {
   useEffect(() => {
     if (id) fetchJobDetails();
   }, [id, fetchJobDetails]);
+
+  const handleSaveResolution = async () => {
+    try {
+      setIsSavingResolution(true);
+      const { error } = await supabase
+        .from("job_orders")
+        .update({ resolution_notes: resolutionNotes })
+        .eq("job_order_no", id);
+
+      if (error) throw error;
+      alert("Resolution notes saved successfully!");
+      fetchJobDetails();
+    } catch (error) {
+      console.error("Error saving resolution:", error);
+      alert("Failed to save resolution.");
+    } finally {
+      setIsSavingResolution(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -208,12 +238,20 @@ export default function JobOrderDetails() {
               <span className="w-1.5 h-1.5 rounded-full bg-current/70 mr-1.5 mt-1" />
               {jobData.status}
             </span>
-            <button
-              onClick={() => printJobOrder(jobData.job_order_no.toString())}
-              className="w-full lg:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-3 rounded-xl font-black transition-all shadow-md shadow-blue-600/25 active:scale-95"
-            >
-              <Printer className="w-4 h-4" /> Print Ticket
-            </button>
+            <div className="flex gap-2 w-full lg:w-auto">
+              <button
+                onClick={() => printJobOrder(jobData.job_order_no.toString())}
+                className="flex-1 lg:flex-none flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                <Printer className="w-4 h-4" /> Ticket
+              </button>
+              <button
+                onClick={() => printCSR(jobData.job_order_no.toString())}
+                className="flex-1 lg:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl font-black transition-all shadow-md shadow-emerald-500/25 active:scale-95"
+              >
+                <FileText className="w-4 h-4" /> Print CSR
+              </button>
+            </div>
           </div>
         </div>
 
@@ -390,6 +428,38 @@ export default function JobOrderDetails() {
                 <p className="text-sm font-medium text-slate-700">
                   {jobData.visual_checks || "No physical damage noted."}
                 </p>
+              </div>
+            </div>
+          </div>
+
+          {/* NEW: RESOLUTION NOTES CARD */}
+          <div className="bg-white rounded-3xl border border-emerald-200/80 shadow-[0_12px_28px_rgba(16,185,129,0.06)] p-5 sm:p-6 relative overflow-hidden mt-6">
+            <h3 className="text-sm font-black text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" /> Resolution & Action Taken
+            </h3>
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase mb-2">
+                Final Technician Report (Printed on CSR)
+              </p>
+              <textarea
+                rows={4}
+                value={resolutionNotes}
+                onChange={(e) => setResolutionNotes(e.target.value)}
+                placeholder="Detail the repairs made, parts replaced, and final checks performed..."
+                className="w-full bg-emerald-50/50 border border-emerald-100 rounded-xl text-sm p-4 outline-none focus:ring-2 focus:ring-emerald-500 resize-none font-medium text-slate-800"
+              />
+              <div className="flex justify-end mt-3">
+                <button
+                  onClick={handleSaveResolution}
+                  disabled={isSavingResolution}
+                  className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-bold px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2"
+                >
+                  {isSavingResolution ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Save Resolution Notes"
+                  )}
+                </button>
               </div>
             </div>
           </div>

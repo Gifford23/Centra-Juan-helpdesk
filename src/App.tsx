@@ -15,6 +15,7 @@ import SystemLogsContent from "./components/SystemLogsContent";
 import JobOrderDetails from "./components/JobOrderDetails";
 import TermsAndConditions from "./components/TermsAndConditions";
 import QuotationsContent from "./components/QuotationsContent";
+import AccountsReceivableContent from "./components/AccountsReceivableContent";
 
 // --- NEW CUSTOMER PORTAL IMPORTS ---
 import CustomerLogin from "./components/CustomerLogin";
@@ -117,6 +118,16 @@ export default function App() {
             <ProtectedRoute>
               <AdminLayout>
                 <QuotationsContent />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ar"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <AccountsReceivableContent />
               </AdminLayout>
             </ProtectedRoute>
           }

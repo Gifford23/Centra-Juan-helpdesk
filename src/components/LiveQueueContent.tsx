@@ -52,6 +52,7 @@ export default function LiveQueueContent() {
 
   // Search and Filter states
   const [searchTerm, setSearchTerm] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
   // DELETE Modal States
@@ -293,8 +294,11 @@ export default function LiveQueueContent() {
       job.id.includes(searchTerm) ||
       job.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
       job.device.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDate =
+      !dateFilter ||
+      new Date(job.createdAt).toISOString().slice(0, 10) === dateFilter;
     const matchesStatus = statusFilter === "" || job.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesDate && matchesStatus;
   });
 
   const totalInQueue = queueData.length;
@@ -437,24 +441,34 @@ export default function LiveQueueContent() {
           />
         </div>
         <div className="w-full xl:w-auto xl:ml-auto">
-          <div className="relative w-full sm:w-52">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-              <Filter className="h-4 w-4 text-gray-400" />
-            </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="block w-full pl-10 pr-10 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none text-sm font-semibold appearance-none bg-white cursor-pointer hover:bg-slate-50 transition-colors"
-            >
-              <option value="">All Statuses</option>
-              <option value="Received">Received</option>
-              <option value="Diagnosing">Diagnosing</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Waiting on Parts">Waiting on Parts</option>
-              <option value="Ready">Ready</option>
-            </select>
-            <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
-              <ChevronDown className="h-4 w-4 text-gray-400" />
+          <div className="flex w-full flex-col sm:flex-row gap-2 sm:gap-3">
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="block w-full sm:w-44 px-3 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none text-sm font-semibold bg-white cursor-pointer hover:bg-slate-50 transition-colors"
+              aria-label="Filter by date"
+            />
+
+            <div className="relative w-full sm:w-52">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Filter className="h-4 w-4 text-gray-400" />
+              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="block w-full pl-10 pr-10 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none text-sm font-semibold appearance-none bg-white cursor-pointer hover:bg-slate-50 transition-colors"
+              >
+                <option value="">All Statuses</option>
+                <option value="Received">Received</option>
+                <option value="Diagnosing">Diagnosing</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Waiting on Parts">Waiting on Parts</option>
+                <option value="Ready">Ready</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </div>
             </div>
           </div>
         </div>

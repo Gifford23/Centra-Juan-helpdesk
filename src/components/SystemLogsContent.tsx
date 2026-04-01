@@ -30,6 +30,9 @@ export default function SystemLogsContent() {
   const [logToDelete, setLogToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const hasActiveFilters =
+    searchQuery.trim().length > 0 || startDate.length > 0 || endDate.length > 0;
+
   // RBAC: Only Super Admins should be here, but just in case:
   const savedUser = JSON.parse(
     localStorage.getItem("central_juan_user") || "{}",
@@ -132,6 +135,12 @@ export default function SystemLogsContent() {
     }
   };
 
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setStartDate("");
+    setEndDate("");
+  };
+
   if (!isSuperAdmin) {
     return (
       <div className="flex items-center justify-center h-[60vh] rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -178,7 +187,7 @@ export default function SystemLogsContent() {
           </button>
         </div>
 
-        <div className="relative mt-4 flex flex-wrap gap-2">
+        <div className="relative mt-4 grid grid-cols-1 sm:flex gap-2">
           <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-700">
             Total Logs: {filteredLogs.length}
           </span>
@@ -208,7 +217,7 @@ export default function SystemLogsContent() {
           </div>
 
           <div className="w-full lg:w-auto flex justify-end">
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex w-full lg:w-auto flex-col sm:flex-row gap-3">
               <div className="relative">
                 <CalendarDays className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
@@ -232,6 +241,16 @@ export default function SystemLogsContent() {
                   title="End date"
                 />
               </div>
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="w-full sm:w-auto px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  Clear Filters
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -288,13 +307,6 @@ export default function SystemLogsContent() {
                         minute: "2-digit",
                       })}
                     </div>
-                    <button
-                      onClick={() => setLogToDelete(log.id)}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Delete Log"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
 
                   <div className="flex items-center gap-2 text-sm font-bold text-blue-700 bg-blue-50 border border-blue-100 px-3 py-2 rounded-lg w-fit">
@@ -319,6 +331,14 @@ export default function SystemLogsContent() {
                       {log.details || "-"}
                     </p>
                   </div>
+
+                  <button
+                    onClick={() => setLogToDelete(log.id)}
+                    className="w-full mt-1 inline-flex items-center justify-center gap-2 p-2.5 text-sm font-bold text-red-600 hover:bg-red-50 border border-red-100 rounded-lg transition-colors"
+                    title="Delete Log"
+                  >
+                    <Trash2 className="w-4 h-4" /> Delete Log
+                  </button>
                 </div>
               ))}
             </div>
@@ -327,19 +347,19 @@ export default function SystemLogsContent() {
               <table className="w-full min-w-[900px] text-left border-collapse whitespace-nowrap">
                 <thead>
                   <tr>
-                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-slate-100">
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                       Date & Time
                     </th>
-                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-slate-100">
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                       User
                     </th>
-                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-slate-100">
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200">
                       Action
                     </th>
-                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-slate-100 w-full">
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 w-full">
                       Details
                     </th>
-                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-slate-500 bg-slate-50 border-b border-slate-100 text-right">
+                    <th className="px-4 sm:px-7 py-4 font-bold text-xs uppercase tracking-wider text-gray-700 bg-gray-100 border-b border-gray-200 text-right">
                       Actions
                     </th>
                   </tr>

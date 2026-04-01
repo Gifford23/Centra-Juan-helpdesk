@@ -430,13 +430,13 @@ export default function DashboardContent() {
             </div>
 
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight truncate">
+              <h1 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight truncate">
                 {greeting},{" "}
                 <span className="text-blue-600">{firstName || "Team"}</span>
                 <img
                   src={greetingIcon}
                   alt={`${greeting} icon`}
-                  className="inline-block w-8 h-8 sm:w-9 sm:h-9 ml-2 -mt-1 object-contain"
+                  className="inline-block w-7 h-7 sm:w-9 sm:h-9 ml-2 -mt-1 object-contain"
                 />
               </h1>
 

@@ -8,14 +8,16 @@ import {
   Activity,
   Search,
   RefreshCw,
-  UserCircle2,
   Camera,
   FileText,
   Check,
-  X,
   MessageSquare,
-  Receipt,
   Calendar,
+  Building2,
+  FileSpreadsheet,
+  Download,
+  ScrollText,
+  ArrowRight,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import technician from "../assets/technician.png";
@@ -24,8 +26,9 @@ import ticket2 from "../assets/icons/ticket2.png";
 import checkIcon from "../assets/icons/check.png";
 import formIcon from "../assets/icons/form.png";
 import toolsIcon from "../assets/icons/tools.png";
+import userIcon from "../assets/icons/user.png";
+import CustomerProgressDetails from "./CustomerProgressDetails";
 
-// NEW TYPE FOR QUOTATION ITEMS
 type QuoteItem = {
   id: string;
   item: string;
@@ -43,24 +46,124 @@ type Ticket = {
   created_at: string;
   job_order_no?: string | number;
   complaint_notes?: string;
+  resolution_notes?: string;
   assigned_tech?: string | null;
   quotation_status?: string;
   quotation_amount?: number;
   quotation_message?: string;
-  quotation_items?: QuoteItem[]; // Added quotation items
+  quotation_items?: QuoteItem[];
   payment_status?: string;
+  amount_paid?: number; // <-- NEW
   has_purchase_order?: boolean;
+};
+
+type RealtimeJobOrderRow = {
+  id?: string | number;
+  job_order_no?: string | number;
+  status?: string;
+  assigned_tech?: string | null;
+  priority?: string | null;
+  quotation_status?: string;
+  quotation_amount?: number | null;
+  payment_status?: string;
+  amount_paid?: number | null;
+  has_purchase_order?: boolean;
+  resolution_notes?: string | null;
 };
 
 const COMPLETED_STATUSES = ["Ready for Pickup", "Ready", "Released"];
 
+const formatPeso = (value?: number | null) =>
+  `P${Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+  })}`;
+
+const buildUpdateMessages = (
+  oldRow: RealtimeJobOrderRow,
+  newRow: RealtimeJobOrderRow,
+) => {
+  const ticketNo = newRow.job_order_no ?? newRow.id ?? "--";
+  const messages: string[] = [];
+
+  if (oldRow.status !== newRow.status && newRow.status) {
+    messages.push(`Ticket #${ticketNo} status updated to: ${newRow.status}`);
+  }
+
+  if (oldRow.assigned_tech !== newRow.assigned_tech) {
+    messages.push(
+      `Ticket #${ticketNo} technician updated: ${newRow.assigned_tech || "Unassigned"}`,
+    );
+  }
+
+  if (oldRow.priority !== newRow.priority && newRow.priority) {
+    messages.push(`Ticket #${ticketNo} priority set to: ${newRow.priority}`);
+  }
+
+  if (
+    oldRow.quotation_status !== newRow.quotation_status &&
+    newRow.quotation_status
+  ) {
+    messages.push(
+      `Ticket #${ticketNo} quotation status: ${newRow.quotation_status}`,
+    );
+  }
+
+  if (oldRow.quotation_amount !== newRow.quotation_amount) {
+    messages.push(
+      `Ticket #${ticketNo} quotation amount updated: ${formatPeso(newRow.quotation_amount)}`,
+    );
+  }
+
+  if (oldRow.has_purchase_order !== newRow.has_purchase_order) {
+    messages.push(
+      `Ticket #${ticketNo} purchase order ${newRow.has_purchase_order ? "confirmed" : "updated"}`,
+    );
+  }
+
+  if (
+    oldRow.payment_status !== newRow.payment_status &&
+    newRow.payment_status
+  ) {
+    messages.push(
+      `Ticket #${ticketNo} payment status: ${newRow.payment_status}`,
+    );
+  }
+
+  if (oldRow.amount_paid !== newRow.amount_paid) {
+    messages.push(
+      `Ticket #${ticketNo} payment recorded: ${formatPeso(newRow.amount_paid)}`,
+    );
+  }
+
+  if (
+    oldRow.resolution_notes !== newRow.resolution_notes &&
+    (newRow.resolution_notes || "").trim().length > 0
+  ) {
+    messages.push(`Ticket #${ticketNo} has a new technician resolution note.`);
+  }
+
+  if (messages.length === 0) {
+    messages.push(`Ticket #${ticketNo} was updated by admin.`);
+  }
+
+  return messages;
+};
+
 const isCompletedTicket = (status: string) =>
   COMPLETED_STATUSES.includes(status);
+
+const formatTrackingId = (ticket: Ticket) => {
+  const rawId = String(ticket.job_order_no ?? ticket.id ?? "")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase();
+  return `CJ-${rawId || "UNKNOWN"}`;
+};
 
 export default function CustomerDashboard() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const prevTicketsJson = useRef<string | null>(null);
   const [notifications, setNotifications] = useState<string[]>([]);
   const [newNotificationPulse, setNewNotificationPulse] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -71,15 +174,42 @@ export default function CustomerDashboard() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"tickets" | "quotations">(
-    "tickets",
-  );
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const playNotificationSound = useCallback(() => {
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = 880;
+      gain.gain.value = 0.06;
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.start();
+      setTimeout(() => {
+        oscillator.stop();
+        ctx.close();
+      }, 180);
+    } catch (e) {
+      console.error("Notification sound error:", e);
+    }
+  }, []);
 
-  // NEW: Selected Quotation State for the Detailed PDF-style View
+  // TABS STATE
+  const [activeTab, setActiveTab] = useState<
+    "tickets" | "quotations" | "invoices" | "progress"
+  >("tickets");
+
+  // MODAL STATES
+  const [progressTicket, setProgressTicket] = useState<Ticket | null>(null);
   const [selectedQuotation, setSelectedQuotation] = useState<Ticket | null>(
     null,
   );
+  const [selectedInvoice, setSelectedInvoice] = useState<Ticket | null>(null); // <-- NEW
 
   const [customerReply, setCustomerReply] = useState("");
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
@@ -106,25 +236,37 @@ export default function CustomerDashboard() {
 
         if (error) throw error;
         if (data) {
-          setTickets(data);
-          setLastUpdated(new Date());
+          // Only update tickets state if the payload actually changed
+          try {
+            const dataJson = JSON.stringify(data);
+            if (prevTicketsJson.current !== dataJson) {
+              setTickets(data);
+              setLastUpdated(new Date());
+              prevTicketsJson.current = dataJson;
+            }
+          } catch {
+            // Fallback: if serialization fails, just set normally
+            setTickets(data);
+            setLastUpdated(new Date());
+            prevTicketsJson.current = null;
+          }
 
-          if (selectedTicket) {
+          // Update selected items only when their content actually changed (deep-compare)
+          if (progressTicket) {
             const updatedSelected = data.find(
-              (t) => t.id === selectedTicket.id,
+              (t) => t.id === progressTicket.id,
             );
             if (updatedSelected) {
               try {
-                const prev = JSON.stringify(selectedTicket);
+                const prev = JSON.stringify(progressTicket);
                 const next = JSON.stringify(updatedSelected);
-                if (prev !== next) setSelectedTicket(updatedSelected as Ticket);
-              } catch (e) {
-                setSelectedTicket(updatedSelected as Ticket);
+                if (prev !== next) setProgressTicket(updatedSelected as Ticket);
+              } catch {
+                setProgressTicket(updatedSelected as Ticket);
               }
             }
           }
 
-          // Also update selected quotation if it's open but avoid unnecessary re-sets
           if (selectedQuotation) {
             const updatedQuote = data.find(
               (t) => t.id === selectedQuotation.id,
@@ -135,8 +277,24 @@ export default function CustomerDashboard() {
                 const nextQ = JSON.stringify(updatedQuote);
                 if (prevQ !== nextQ)
                   setSelectedQuotation(updatedQuote as Ticket);
-              } catch (e) {
+              } catch {
                 setSelectedQuotation(updatedQuote as Ticket);
+              }
+            }
+          }
+
+          if (selectedInvoice) {
+            const updatedInvoice = data.find(
+              (t) => t.id === selectedInvoice.id,
+            );
+            if (updatedInvoice) {
+              try {
+                const prevI = JSON.stringify(selectedInvoice);
+                const nextI = JSON.stringify(updatedInvoice);
+                if (prevI !== nextI)
+                  setSelectedInvoice(updatedInvoice as Ticket);
+              } catch {
+                setSelectedInvoice(updatedInvoice as Ticket);
               }
             }
           }
@@ -147,7 +305,7 @@ export default function CustomerDashboard() {
         if (!silent) setIsLoading(false);
       }
     },
-    [customerId, selectedTicket, selectedQuotation],
+    [customerId, progressTicket, selectedQuotation, selectedInvoice],
   );
 
   const handleRefresh = async () => {
@@ -165,8 +323,33 @@ export default function CustomerDashboard() {
     if (!customerId) return;
     fetchMyTickets();
 
+    const pushNotifications = (items: string[]) => {
+      if (items.length === 0) return;
+      setNotifications((prev) => [...items, ...prev].slice(0, 50));
+      setNewNotificationPulse(true);
+      playNotificationSound();
+      setTimeout(() => setNewNotificationPulse(false), 1600);
+    };
+
     const channel = supabase
       .channel("customer_updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "job_orders",
+          filter: `customer_id=eq.${customerId}`,
+        },
+        (payload) => {
+          const inserted = payload.new as RealtimeJobOrderRow;
+          const ticketNo = inserted.job_order_no ?? inserted.id ?? "--";
+          pushNotifications([
+            `Ticket #${ticketNo} has been created and is now being processed.`,
+          ]);
+          fetchMyTickets(true);
+        },
+      )
       .on(
         "postgres_changes",
         {
@@ -176,45 +359,9 @@ export default function CustomerDashboard() {
           filter: `customer_id=eq.${customerId}`,
         },
         (payload) => {
-          const newStatus = payload.new.status;
-          const ticketId = payload.new.job_order_no;
-          const message = `Ticket #${ticketId} status updated to: ${newStatus}`;
-          setNotifications((prev) => [message, ...prev]);
-          // Pulse the bell and play a short notification tone
-          try {
-            setNewNotificationPulse(true);
-            // Play short beep using Web Audio API
-            const playNotificationSound = () => {
-              try {
-                const AudioCtx =
-                  window.AudioContext || (window as any).webkitAudioContext;
-                if (!AudioCtx) return;
-                const ctx = new AudioCtx();
-                const o = ctx.createOscillator();
-                const g = ctx.createGain();
-                o.type = "sine";
-                o.frequency.value = 880;
-                g.gain.value = 0.06;
-                o.connect(g);
-                g.connect(ctx.destination);
-                o.start();
-                setTimeout(() => {
-                  o.stop();
-                  ctx.close();
-                }, 180);
-              } catch (e) {
-                // ignore audio errors
-                console.error("Notification sound error:", e);
-              }
-            };
-            playNotificationSound();
-          } catch (e) {
-            console.error(e);
-          }
-
-          // Clear pulse after a short period
-          setTimeout(() => setNewNotificationPulse(false), 1600);
-
+          const oldRow = payload.old as RealtimeJobOrderRow;
+          const newRow = payload.new as RealtimeJobOrderRow;
+          pushNotifications(buildUpdateMessages(oldRow, newRow));
           fetchMyTickets(true);
         },
       )
@@ -223,11 +370,11 @@ export default function CustomerDashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [customerId, fetchMyTickets]);
+  }, [customerId, fetchMyTickets, playNotificationSound]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
-    if (selectedTicket || selectedQuotation) {
+    if (selectedQuotation || selectedInvoice) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = prev;
@@ -235,7 +382,13 @@ export default function CustomerDashboard() {
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [selectedTicket, selectedQuotation]);
+  }, [selectedQuotation, selectedInvoice]);
+
+  const openProgressView = (ticket: Ticket) => {
+    setProgressTicket(ticket);
+    setActiveTab("progress");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const handleLogout = async () => {
     setIsSigningOut(true);
@@ -248,31 +401,22 @@ export default function CustomerDashboard() {
     try {
       const file = e.target.files?.[0];
       if (!file) return;
-
       setIsUploadingAvatar(true);
-
       const fileExt = file.name.split(".").pop();
       const fileName = `customer-${customerProfile.id}-${Date.now()}.${fileExt}`;
-
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(fileName, file);
-
       if (uploadError) throw uploadError;
-
       const { data: publicUrlData } = supabase.storage
         .from("avatars")
         .getPublicUrl(fileName);
-
       const newAvatarUrl = publicUrlData.publicUrl;
-
       const { error: dbError } = await supabase
         .from("customers")
         .update({ avatar_url: newAvatarUrl })
         .eq("id", customerProfile.id);
-
       if (dbError) throw dbError;
-
       const updatedCustomer = { ...customerProfile, avatar_url: newAvatarUrl };
       setCustomerProfile(updatedCustomer);
       localStorage.setItem(
@@ -313,45 +457,46 @@ export default function CustomerDashboard() {
     }
   };
 
-  const getProgressSteps = (ticket: Ticket) => {
-    const steps = [{ label: "Job Order", active: true }];
-
-    if (ticket.quotation_status && ticket.quotation_status !== "Not Created") {
-      steps.push({
-        label: "Quotation",
-        active: ticket.quotation_status === "Accepted",
-      });
-    }
-    if (ticket.has_purchase_order) {
-      steps.push({ label: "Purchase Order", active: true });
-    }
-    steps.push({ label: "Payment", active: ticket.payment_status === "Paid" });
-    steps.push({
-      label: "Complete",
-      active: COMPLETED_STATUSES.includes(ticket.status),
-    });
-
-    return steps;
-  };
-
+  // derived lists
   const activeTickets = tickets.filter((t) => !isCompletedTicket(t.status));
   const completedTickets = tickets.filter((t) => isCompletedTicket(t.status));
   const pendingAssignmentCount = activeTickets.filter(
     (t) => !t.assigned_tech,
   ).length;
-  const pendingQuotations = tickets.filter(
+
+  const hasQuotationItems = (ticket: Ticket) =>
+    Array.isArray(ticket.quotation_items) && ticket.quotation_items.length > 0;
+
+  const quotationTickets = tickets.filter((t) => hasQuotationItems(t));
+
+  const pendingQuotations = quotationTickets.filter(
     (t) => t.quotation_status === "Pending Confirmation",
   );
+
+  // INVOICES: Any ticket that has an accepted quote is officially an invoice
+  const generatedInvoices = quotationTickets.filter(
+    (t) => t.quotation_status === "Accepted",
+  );
+
+  const hasQuotationProcess = quotationTickets.length > 0;
+  const hasInvoiceProcess = generatedInvoices.length > 0;
+
+  useEffect(() => {
+    if (activeTab === "quotations" && !hasQuotationProcess) {
+      setActiveTab("tickets");
+    }
+    if (activeTab === "invoices" && !hasInvoiceProcess) {
+      setActiveTab("tickets");
+    }
+  }, [activeTab, hasQuotationProcess, hasInvoiceProcess]);
 
   const filteredTickets = tickets.filter((ticket) => {
     if (statusFilter === "active" && isCompletedTicket(ticket.status))
       return false;
     if (statusFilter === "completed" && !isCompletedTicket(ticket.status))
       return false;
-
     const query = searchTerm.trim().toLowerCase();
     if (!query) return true;
-
     return [
       ticket.brand,
       ticket.model,
@@ -365,9 +510,15 @@ export default function CustomerDashboard() {
       .includes(query);
   });
 
+  // Invoice Print helper
+  const handlePrintInvoice = () => {
+    window.print();
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-100 via-white to-amber-50/50 font-sans">
-      <header className="bg-white/90 backdrop-blur border-b border-stone-200 sticky top-0 z-40 shadow-sm">
+    <div className="min-h-screen bg-gradient-to-b from-stone-100 via-white to-amber-50/50 font-sans print:bg-white print:min-h-0">
+      {/* Hide header and UI elements when printing */}
+      <header className="bg-white border-b border-stone-200 sticky top-0 z-40 shadow-sm print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-16 py-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <img src={technician} alt="Logo" className="w-9 h-9 rounded-xl" />
@@ -413,7 +564,6 @@ export default function CustomerDashboard() {
                         <li
                           key={i}
                           onClick={() => {
-                            // Try to open the referenced ticket when clicking the notification
                             const match = note.match(/#(\d+)/);
                             if (match) {
                               const jobNo = match[1];
@@ -422,9 +572,8 @@ export default function CustomerDashboard() {
                                   String(t.job_order_no) === jobNo ||
                                   String(t.id) === jobNo,
                               );
-                              if (found) setSelectedTicket(found);
+                              if (found) openProgressView(found);
                             }
-                            // remove the clicked notification
                             setNotifications((prev) =>
                               prev.filter((_, idx) => idx !== i),
                             );
@@ -506,7 +655,7 @@ export default function CustomerDashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8 print:hidden">
         <section className="bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 rounded-3xl p-5 sm:p-7 text-white shadow-lg">
           <div className="flex flex-col lg:flex-row gap-6 lg:items-end lg:justify-between">
             <div>
@@ -521,25 +670,34 @@ export default function CustomerDashboard() {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm font-semibold border border-white/20 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                <RefreshCw
-                  className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
-                />{" "}
-                Refresh
-              </button>
-              <span className="inline-flex items-center px-4 py-2 rounded-xl bg-white/10 text-xs font-semibold border border-white/20">
-                Last updated:{" "}
-                {lastUpdated ? lastUpdated.toLocaleTimeString() : "--"}
-              </span>
+            <div className="flex flex-col items-start sm:items-end gap-2">
+              {progressTicket ? (
+                <div className="text-sm font-semibold text-white/90">
+                  Tracking ID: {formatTrackingId(progressTicket)}
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap w-full sm:w-auto gap-2">
+                <button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm font-semibold border border-white/20 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw
+                    className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+                  />{" "}
+                  Refresh
+                </button>
+                <span className="inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 rounded-xl bg-white/10 text-xs font-semibold border border-white/20">
+                  Last updated:{" "}
+                  {lastUpdated ? lastUpdated.toLocaleTimeString() : "--"}
+                </span>
+              </div>
             </div>
           </div>
         </section>
 
+        {/* Metric Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
           <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-sm flex items-center gap-3 sm:gap-4">
             <div className="w-11 h-11 sm:w-12 sm:h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
@@ -577,7 +735,11 @@ export default function CustomerDashboard() {
           </div>
           <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-sm flex items-center gap-3 sm:gap-4">
             <div className="w-11 h-11 sm:w-12 sm:h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
-              <UserCircle2 className="w-7 h-7" />
+              <img
+                src={userIcon}
+                alt="user"
+                className="w-7 h-7 object-contain"
+              />
             </div>
             <div>
               <p className="text-[10px] sm:text-xs font-bold text-stone-400 uppercase tracking-wider mb-1">
@@ -607,29 +769,46 @@ export default function CustomerDashboard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 border-b border-stone-200">
+        {/* TABS NAVIGATION */}
+        <div className="flex items-center gap-6 border-b border-stone-200 overflow-x-auto">
           <button
             onClick={() => setActiveTab("tickets")}
-            className={`pb-4 font-bold text-sm px-2 border-b-2 transition-colors ${activeTab === "tickets" ? "border-blue-600 text-blue-600" : "border-transparent text-stone-500 hover:text-stone-700"}`}
+            className={`pb-4 font-bold text-sm px-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === "tickets" ? "border-blue-600 text-blue-600" : "border-transparent text-stone-500 hover:text-stone-700"}`}
           >
             My Tickets
           </button>
+          {hasQuotationProcess && (
+            <button
+              onClick={() => setActiveTab("quotations")}
+              className={`pb-4 font-bold text-sm px-2 border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === "quotations" ? "border-blue-600 text-blue-600" : "border-transparent text-stone-500 hover:text-stone-700"}`}
+            >
+              Quotations
+              {pendingQuotations.length > 0 && (
+                <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                  {pendingQuotations.length}
+                </span>
+              )}
+            </button>
+          )}
+          {hasInvoiceProcess && (
+            <button
+              onClick={() => setActiveTab("invoices")}
+              className={`pb-4 font-bold text-sm px-2 border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === "invoices" ? "border-emerald-600 text-emerald-600" : "border-transparent text-stone-500 hover:text-stone-700"}`}
+            >
+              Invoices & Billing
+            </button>
+          )}
           <button
-            onClick={() => setActiveTab("quotations")}
-            className={`pb-4 font-bold text-sm px-2 border-b-2 transition-colors flex items-center gap-2 ${activeTab === "quotations" ? "border-blue-600 text-blue-600" : "border-transparent text-stone-500 hover:text-stone-700"}`}
+            onClick={() => setActiveTab("progress")}
+            className={`pb-4 font-bold text-sm px-2 border-b-2 transition-colors whitespace-nowrap ${activeTab === "progress" ? "border-indigo-600 text-indigo-600" : "border-transparent text-stone-500 hover:text-stone-700"}`}
           >
-            Quotations
-            {pendingQuotations.length > 0 && (
-              <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                {pendingQuotations.length}
-              </span>
-            )}
+            Progress View
           </button>
         </div>
 
         {/* TAB 1: TICKETS HISTORY */}
         {activeTab === "tickets" && (
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden animate-in fade-in">
             <div className="px-4 sm:px-6 py-5 border-b border-stone-100 bg-white">
               <div className="flex flex-col gap-4">
                 <div>
@@ -650,7 +829,7 @@ export default function CustomerDashboard() {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       placeholder="Search by model, issue, status, ticket #"
-                      className="w-full rounded-xl border border-stone-200 bg-stone-50 pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-300"
+                      className="w-full rounded-xl border border-stone-200 bg-stone-50 pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
@@ -680,10 +859,7 @@ export default function CustomerDashboard() {
 
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-14">
-                <Loader2 className="w-8 h-8 text-amber-600 animate-spin mb-3" />
-                <p className="text-stone-500 font-medium">
-                  Loading your tickets...
-                </p>
+                <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-3" />
               </div>
             ) : tickets.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-14 px-4">
@@ -702,16 +878,13 @@ export default function CustomerDashboard() {
                 <p className="text-stone-600 font-semibold text-center">
                   No matching tickets found.
                 </p>
-                <p className="text-stone-500 text-sm text-center mt-1">
-                  Try a different keyword or ticket filter.
-                </p>
               </div>
             ) : (
               <div className="divide-y divide-stone-100">
                 {filteredTickets.map((ticket) => (
                   <div
                     key={ticket.id}
-                    onClick={() => setSelectedTicket(ticket)}
+                    onClick={() => openProgressView(ticket)}
                     className="p-4 sm:p-6 hover:bg-stone-50/70 transition-colors flex flex-col lg:flex-row lg:items-center justify-between gap-4 cursor-pointer group"
                   >
                     <div className="flex items-start gap-3 sm:gap-4 min-w-0">
@@ -758,12 +931,6 @@ export default function CustomerDashboard() {
                       >
                         {ticket.status}
                       </span>
-                      <span className="text-xs font-bold text-stone-500 mt-1 sm:mt-2 flex items-center gap-1">
-                        Tech:
-                        <span className="text-stone-900">
-                          {ticket.assigned_tech || "Pending Assignment"}
-                        </span>
-                      </span>
                     </div>
                   </div>
                 ))}
@@ -773,187 +940,234 @@ export default function CustomerDashboard() {
         )}
 
         {/* TAB 2: QUOTATIONS LIST */}
-        {activeTab === "quotations" && (
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden p-6">
+        {activeTab === "quotations" && hasQuotationProcess && (
+          <div className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden p-6 animate-in fade-in">
             <h2 className="text-xl font-bold text-stone-900 mb-6">
-              Billing & Quotations
+              Pending & Past Quotations
             </h2>
 
-            {tickets.filter(
-              (t) => t.quotation_status && t.quotation_status !== "Not Created",
-            ).length === 0 ? (
+            {quotationTickets.length === 0 ? (
               <div className="flex justify-center py-10 text-stone-500 font-medium">
                 No quotations available yet.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {tickets
-                  .filter(
-                    (t) =>
-                      t.quotation_status &&
-                      t.quotation_status !== "Not Created",
-                  )
-                  .map((ticket) => (
+                {quotationTickets.map((ticket) => (
+                  <div
+                    key={ticket.id}
+                    className="border border-stone-200 rounded-2xl p-5 bg-stone-50/50 flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex justify-between items-start mb-3">
+                        <span
+                          className={`text-xs font-bold px-3 py-1 rounded-full border ${ticket.quotation_status === "Accepted" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : ticket.quotation_status === "Rejected" ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}
+                        >
+                          {ticket.quotation_status}
+                        </span>
+                        <span className="text-xs font-bold text-stone-400">
+                          #{ticket.job_order_no}
+                        </span>
+                      </div>
+                      <p className="text-sm font-bold text-stone-500 uppercase tracking-wider mb-1">
+                        {ticket.brand} {ticket.model}
+                      </p>
+                      <h4 className="font-black text-stone-900 text-xl sm:text-3xl mb-4">
+                        ₱{" "}
+                        {ticket.quotation_amount?.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                        })}
+                      </h4>
+                    </div>
+
+                    <button
+                      onClick={() => setSelectedQuotation(ticket)}
+                      className="w-full mt-2 py-2.5 bg-white border border-stone-200 text-stone-700 font-bold text-sm rounded-xl hover:bg-stone-100 hover:text-blue-600 transition-colors flex justify-center items-center gap-2 shadow-sm"
+                    >
+                      <img
+                        src={formIcon}
+                        alt="form"
+                        className="w-4 h-4 object-contain"
+                      />{" "}
+                      View Quotation Details
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: INVOICES (NEW) */}
+        {activeTab === "invoices" && hasInvoiceProcess && (
+          <div className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden p-6 animate-in fade-in">
+            <h2 className="text-xl font-bold text-stone-900 mb-6 flex items-center gap-2">
+              <FileSpreadsheet className="w-6 h-6 text-emerald-600" /> My
+              Invoices
+            </h2>
+
+            {generatedInvoices.length === 0 ? (
+              <div className="flex justify-center py-10 text-stone-500 font-medium">
+                No invoices generated yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {generatedInvoices.map((invoice) => {
+                  const total = invoice.quotation_amount || 0;
+                  const paid = invoice.amount_paid || 0;
+                  const balance = total - paid;
+
+                  return (
                     <div
-                      key={ticket.id}
+                      key={invoice.id}
                       className="border border-stone-200 rounded-2xl p-5 bg-stone-50/50 flex flex-col justify-between"
                     >
                       <div>
                         <div className="flex justify-between items-start mb-3">
                           <span
-                            className={`text-xs font-bold px-3 py-1 rounded-full border ${ticket.quotation_status === "Accepted" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : ticket.quotation_status === "Rejected" ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}
+                            className={`text-xs font-bold px-3 py-1 rounded-full border ${balance <= 0 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : paid > 0 ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-rose-50 text-rose-700 border-rose-200"}`}
                           >
-                            {ticket.quotation_status}
+                            {balance <= 0
+                              ? "Fully Paid"
+                              : paid > 0
+                                ? "Partial Payment"
+                                : "Unpaid"}
                           </span>
                           <span className="text-xs font-bold text-stone-400">
-                            #{ticket.job_order_no}
+                            INV-#{invoice.job_order_no}
                           </span>
                         </div>
                         <p className="text-sm font-bold text-stone-500 uppercase tracking-wider mb-1">
-                          {ticket.brand} {ticket.model}
+                          {invoice.brand} {invoice.model}
                         </p>
-                        <h4 className="font-black text-stone-900 text-xl sm:text-3xl mb-4">
-                          ₱{" "}
-                          {ticket.quotation_amount?.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                          })}
-                        </h4>
+
+                        <div className="bg-white p-3 rounded-xl border border-stone-100 my-4 space-y-2">
+                          <div className="flex justify-between text-sm font-medium text-stone-500">
+                            <span>Total Amount:</span>
+                            <span>
+                              ₱
+                              {total.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                              })}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm font-medium text-emerald-600">
+                            <span>Amount Paid:</span>
+                            <span>
+                              -₱
+                              {paid.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                              })}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm font-black text-stone-900 pt-2 border-t border-stone-100">
+                            <span>Balance Due:</span>
+                            <span
+                              className={
+                                balance > 0
+                                  ? "text-rose-600"
+                                  : "text-emerald-600"
+                              }
+                            >
+                              ₱
+                              {balance.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                              })}
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
                       <button
-                        onClick={() => setSelectedQuotation(ticket)}
-                        className="w-full mt-2 py-2.5 bg-white border border-stone-200 text-stone-700 font-bold text-sm rounded-xl hover:bg-stone-100 hover:text-blue-600 transition-colors flex justify-center items-center gap-2 shadow-sm"
+                        onClick={() => setSelectedInvoice(invoice)}
+                        className="w-full mt-2 py-2.5 bg-emerald-600 text-white font-bold text-sm rounded-xl hover:bg-emerald-700 transition-colors flex justify-center items-center gap-2 shadow-md shadow-emerald-600/20"
                       >
-                        <img
-                          src={formIcon}
-                          alt="form"
-                          className="w-4 h-4 object-contain"
-                        />{" "}
-                        View Detailed Quotation
+                        <ScrollText className="w-4 h-4" /> View Full Invoice
                       </button>
                     </div>
-                  ))}
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 4: FULL PROGRESS PAGE */}
+        {activeTab === "progress" && (
+          <div className="rounded-3xl border border-stone-200 bg-gradient-to-br from-white via-stone-50 to-indigo-50/30 shadow-sm overflow-hidden animate-in fade-in">
+            {!progressTicket ? (
+              <div className="py-16 px-6 text-center">
+                <h2 className="text-2xl font-black text-stone-900 tracking-tight">
+                  Repair Progress Page
+                </h2>
+                <p className="text-stone-500 font-medium mt-2 max-w-lg mx-auto">
+                  Select any ticket from My Tickets to open its full progress
+                  timeline and status details here.
+                </p>
+                <button
+                  onClick={() => setActiveTab("tickets")}
+                  className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors"
+                >
+                  Go to My Tickets <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="p-5 sm:p-7 lg:p-8 space-y-8">
+                <div className="rounded-2xl bg-gradient-to-r from-indigo-700 via-blue-700 to-cyan-600 text-white p-5 sm:p-6 shadow-lg">
+                  <p className="text-[11px] uppercase tracking-[0.2em] font-bold text-white/80">
+                    Live Progress Monitor
+                  </p>
+                  <div className="mt-2 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+                    <div>
+                      <h3 className="text-2xl sm:text-3xl font-black tracking-tight">
+                        Ticket #{progressTicket.job_order_no}
+                      </h3>
+                      <p className="text-sm sm:text-base text-white/90 mt-1 font-medium">
+                        {progressTicket.brand} {progressTicket.model}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab("tickets")}
+                      className="inline-flex items-center gap-2 self-start md:self-auto px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-sm font-bold transition-colors"
+                    >
+                      Change Ticket <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${isCompletedTicket(progressTicket.status) ? "border-emerald-200/60 bg-emerald-500/20 text-emerald-100" : "border-blue-200/60 bg-blue-500/20 text-blue-100"}`}
+                    >
+                      Status: {progressTicket.status || "Pending"}
+                    </span>
+                    <span className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white/95">
+                      Tech: {progressTicket.assigned_tech || "Unassigned"}
+                    </span>
+                    <span className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white/95">
+                      Quote: {progressTicket.quotation_status || "Not Created"}
+                    </span>
+                    <span className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white/95">
+                      Payment: {progressTicket.payment_status || "Unpaid"}
+                    </span>
+                  </div>
+                </div>
+
+                <CustomerProgressDetails
+                  key={String(progressTicket.job_order_no ?? progressTicket.id)}
+                  ticket={progressTicket}
+                />
               </div>
             )}
           </div>
         )}
       </main>
 
-      {/* TICKET DETAILS MODAL WITH PROGRESS BAR */}
-      {selectedTicket && (
-        <div className="fixed inset-0 z-[50] flex items-center justify-center p-4 bg-stone-900/60">
-          <div className="bg-white w-full max-w-2xl rounded-[24px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-opacity duration-200">
-            <div className="p-5 sm:p-6 border-b border-stone-100 flex justify-between items-center bg-stone-50">
-              <div>
-                <h3 className="text-xl font-black text-stone-900 leading-tight">
-                  Ticket #{selectedTicket.job_order_no}
-                </h3>
-                <p className="text-sm font-medium text-stone-500 mt-0.5">
-                  {selectedTicket.brand} {selectedTicket.model}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedTicket(null)}
-                className="p-2 bg-white rounded-full text-stone-400 hover:text-stone-900 shadow-sm border border-stone-200 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-5 sm:p-6 overflow-y-auto space-y-8">
-              <div>
-                <h4 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-5">
-                  Repair Progress Tracking
-                </h4>
-                <div className="flex items-center justify-between relative px-2">
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1.5 bg-stone-100 z-0 rounded-full"></div>
-                  {getProgressSteps(selectedTicket).map((step, index) => (
-                    <div
-                      key={index}
-                      className="relative z-10 flex flex-col items-center gap-2"
-                    >
-                      <div
-                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm border-2 transition-colors ${step.active ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-600/30" : "bg-white border-stone-300 text-stone-400"}`}
-                      >
-                        {step.active ? (
-                          <Check className="w-4 h-4 sm:w-5 sm:h-5" />
-                        ) : (
-                          index + 1
-                        )}
-                      </div>
-                      <span
-                        className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-center max-w-[60px] sm:max-w-none ${step.active ? "text-blue-900" : "text-stone-400"}`}
-                      >
-                        {step.label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div className="bg-stone-50 p-4 rounded-xl border border-stone-100">
-                  <p className="text-xs font-bold text-stone-400 uppercase">
-                    Current Status
-                  </p>
-                  <p className="font-bold text-stone-900 mt-1">
-                    {selectedTicket.status}
-                  </p>
-                </div>
-                <div className="bg-stone-50 p-4 rounded-xl border border-stone-100">
-                  <p className="text-xs font-bold text-stone-400 uppercase">
-                    Technician
-                  </p>
-                  <p className="font-bold text-stone-900 mt-1">
-                    {selectedTicket.assigned_tech || "Unassigned"}
-                  </p>
-                </div>
-                <div className="bg-stone-50 p-4 rounded-xl border border-stone-100">
-                  <p className="text-xs font-bold text-stone-400 uppercase">
-                    Payment Status
-                  </p>
-                  <p
-                    className={`font-bold mt-1 ${selectedTicket.payment_status === "Paid" ? "text-emerald-600" : "text-amber-600"}`}
-                  >
-                    {selectedTicket.payment_status || "Unpaid"}
-                  </p>
-                </div>
-                <div className="bg-stone-50 p-4 rounded-xl border border-stone-100">
-                  <p className="text-xs font-bold text-stone-400 uppercase">
-                    Quotation Status
-                  </p>
-                  <p className="font-bold text-stone-900 mt-1">
-                    {selectedTicket.quotation_status || "Not Created"}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-xs font-bold text-stone-400 uppercase mb-2">
-                  Reported Issue
-                </p>
-                <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 text-sm font-medium text-stone-700 whitespace-pre-wrap">
-                  {selectedTicket.complaint_notes}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* DETAILED QUOTATION (PDF STYLE) MODAL */}
       {selectedQuotation && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-stone-900/70">
-          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] transition-opacity duration-200">
-            {/* Formal Header */}
-            <div className="p-6 border-b border-stone-100 flex justify-between items-start bg-white shrink-0">
-              <div className="flex items-center gap-4">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-stone-900/70 print:hidden">
+          <div className="bg-white w-full max-w-3xl rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[95vh] animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-4 sm:p-6 border-b border-stone-100 flex flex-col sm:flex-row justify-between items-start gap-3 bg-white shrink-0">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shadow-sm border border-blue-100">
-                  <img
-                    src={formIcon}
-                    alt="form"
-                    className="w-8 h-8 object-contain"
-                  />
+                  <Building2 className="w-7 h-7" />
                 </div>
                 <div>
                   <h3 className="text-xl font-black text-stone-900 leading-tight uppercase tracking-tight">
@@ -964,11 +1178,11 @@ export default function CustomerDashboard() {
                   </p>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-left sm:text-right w-full sm:w-auto">
                 <h2 className="text-2xl font-black text-blue-900 uppercase tracking-wider">
                   Quotation
                 </h2>
-                <p className="text-sm font-medium text-stone-500 mt-1 flex items-center justify-end gap-1.5">
+                <p className="text-sm font-medium text-stone-500 mt-1 flex items-center justify-start sm:justify-end gap-1.5">
                   <Calendar className="w-4 h-4" />
                   {new Date(selectedQuotation.created_at).toLocaleDateString()}
                 </p>
@@ -978,9 +1192,8 @@ export default function CustomerDashboard() {
               </div>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-8 flex-1 bg-stone-50/30">
-              {/* Bill To */}
-              <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm flex justify-between items-start">
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-6 sm:space-y-8 flex-1 bg-stone-50/30">
+              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col sm:flex-row justify-between items-start gap-3">
                 <div>
                   <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2">
                     Prepared For
@@ -992,7 +1205,7 @@ export default function CustomerDashboard() {
                     {selectedQuotation.brand} {selectedQuotation.model}
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="text-left sm:text-right w-full sm:w-auto">
                   <span
                     className={`inline-block px-3 py-1 rounded-full text-xs font-bold border mb-2 ${selectedQuotation.quotation_status === "Accepted" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : selectedQuotation.quotation_status === "Rejected" ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}
                   >
@@ -1001,7 +1214,6 @@ export default function CustomerDashboard() {
                 </div>
               </div>
 
-              {/* Detailed Line Items Table */}
               <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left min-w-0">
@@ -1086,7 +1298,6 @@ export default function CustomerDashboard() {
                 </div>
               </div>
 
-              {/* Notes & Terms */}
               <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm">
                 <span className="flex items-center gap-1.5 text-xs font-bold text-stone-400 uppercase tracking-wider mb-3">
                   <FileText className="w-4 h-4" /> Warranty & Exclusions
@@ -1097,18 +1308,16 @@ export default function CustomerDashboard() {
                 </p>
               </div>
 
-              {/* Accept/Reject Action Area */}
               {selectedQuotation.quotation_status === "Pending Confirmation" ? (
                 <div className="bg-white p-5 sm:p-6 rounded-2xl border-2 border-blue-100 shadow-md shadow-blue-100/50 space-y-4">
                   <div>
-                    <label className="block text-[11px] font-black text-blue-600 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                    <label className="text-[11px] font-black text-blue-600 uppercase tracking-wider flex items-center gap-1.5 mb-2">
                       <MessageSquare className="w-4 h-4" /> Customer Acceptance
                       & Remarks
                     </label>
                     <p className="text-xs text-stone-500 mb-3">
                       By clicking "Accept Quote", you confirm the repairs and
-                      costs listed above. You may add optional instructions for
-                      the technician below.
+                      costs listed above.
                     </p>
                   </div>
                   <textarea
@@ -1152,7 +1361,7 @@ export default function CustomerDashboard() {
                   </div>
                 </div>
               ) : (
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <div
                     className={`flex-1 p-4 rounded-xl border text-center font-bold text-sm ${selectedQuotation.quotation_status === "Accepted" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : selectedQuotation.quotation_status === "Rejected" ? "bg-red-50 text-red-700 border-red-200" : "bg-stone-50 text-stone-500 border-stone-200"}`}
                   >
@@ -1167,6 +1376,197 @@ export default function CustomerDashboard() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW: DETAILED INVOICE MODAL (PRINTABLE) */}
+      {selectedInvoice && (
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-stone-900/70 print:relative print:inset-auto print:bg-white print:p-0 print:flex-none print:z-0">
+          <div className="bg-white w-full max-w-3xl rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[95vh] print:max-h-none print:shadow-none print:rounded-none animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-4 sm:p-6 border-b border-stone-200 flex flex-col sm:flex-row justify-between items-start gap-3 bg-white shrink-0 print:border-b-2">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shadow-sm border border-emerald-100 print:border-none print:bg-transparent">
+                  <Building2 className="w-7 h-7" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-stone-900 leading-tight uppercase tracking-tight">
+                    Central Juan
+                  </h3>
+                  <p className="text-xs font-bold text-stone-500 uppercase tracking-widest mt-0.5">
+                    I.T. Solutions Partner
+                  </p>
+                </div>
+              </div>
+              <div className="text-left sm:text-right flex flex-col items-start sm:items-end w-full sm:w-auto">
+                <h2 className="text-3xl font-black text-emerald-700 uppercase tracking-wider">
+                  INVOICE
+                </h2>
+                <p className="text-sm font-medium text-stone-500 mt-1 flex items-center justify-start sm:justify-end gap-1.5">
+                  <Calendar className="w-4 h-4" />
+                  {new Date(selectedInvoice.created_at).toLocaleDateString()}
+                </p>
+                <p className="text-sm font-bold text-stone-700 mt-0.5">
+                  INV-#{selectedInvoice.job_order_no}
+                </p>
+                {/* Close button removed per request */}
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-6 sm:space-y-8 flex-1 bg-stone-50/30 print:bg-white print:overflow-visible">
+              {/* Bill To */}
+              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-stone-200 shadow-sm flex flex-col sm:flex-row justify-between items-start gap-3 print:shadow-none print:border-none print:p-0">
+                <div>
+                  <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2">
+                    Billed To
+                  </p>
+                  <p className="text-base font-black text-stone-900">
+                    {customerProfile.full_name}
+                  </p>
+                  <p className="text-sm font-medium text-stone-600 mt-1">
+                    {selectedInvoice.brand} {selectedInvoice.model}
+                  </p>
+                </div>
+                <div className="text-left sm:text-right w-full sm:w-auto">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block mb-2">
+                    Payment Status
+                  </span>
+                  <span
+                    className={`inline-block px-3 py-1 rounded-full text-sm font-black border ${(selectedInvoice.quotation_amount || 0) - (selectedInvoice.amount_paid || 0) <= 0 ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "bg-rose-100 text-rose-700 border-rose-200"}`}
+                  >
+                    {(selectedInvoice.quotation_amount || 0) -
+                      (selectedInvoice.amount_paid || 0) <=
+                    0
+                      ? "PAID IN FULL"
+                      : "BALANCE DUE"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Line Items Table */}
+              <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm print:shadow-none print:rounded-none">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left min-w-0">
+                    <thead>
+                      <tr className="text-[11px] font-black text-stone-400 uppercase tracking-wider border-b border-stone-200 bg-stone-100/50 print:bg-transparent">
+                        <th className="py-4 px-5">Item & Description</th>
+                        <th className="py-4 px-5 text-center md:w-20 w-16">
+                          Qty
+                        </th>
+                        <th className="py-4 px-5 text-right md:w-32 w-24">
+                          Rate
+                        </th>
+                        <th className="py-4 px-5 text-right md:w-32 w-24">
+                          Total
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-100">
+                      {!selectedInvoice.quotation_items ||
+                      selectedInvoice.quotation_items.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={4}
+                            className="py-8 text-center text-sm text-stone-500 font-medium"
+                          >
+                            {selectedInvoice.quotation_message ||
+                              "Service and repairs applied."}
+                          </td>
+                        </tr>
+                      ) : (
+                        selectedInvoice.quotation_items.map(
+                          (item: QuoteItem) => (
+                            <tr key={item.id}>
+                              <td className="py-4 px-5 break-words whitespace-normal">
+                                <p className="font-bold text-stone-900 text-sm">
+                                  {item.item}
+                                </p>
+                                {item.description && (
+                                  <p className="text-xs text-stone-500 mt-1">
+                                    {item.description}
+                                  </p>
+                                )}
+                              </td>
+                              <td className="py-4 px-5 text-center font-bold text-stone-700">
+                                {item.qty}
+                              </td>
+                              <td className="py-4 px-5 text-right font-medium text-stone-700">
+                                ₱
+                                {item.rate.toLocaleString(undefined, {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </td>
+                              <td className="py-4 px-5 text-right font-black text-stone-900">
+                                ₱
+                                {item.total.toLocaleString(undefined, {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </td>
+                            </tr>
+                          ),
+                        )
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Financial Totals */}
+                <div className="bg-emerald-50/30 border-t border-stone-200 p-5 sm:px-8 space-y-3 print:bg-transparent">
+                  <div className="flex justify-between items-center text-sm font-bold text-stone-500">
+                    <span>Subtotal / Grand Total</span>
+                    <span>
+                      ₱{" "}
+                      {(selectedInvoice.quotation_amount || 0).toLocaleString(
+                        undefined,
+                        { minimumFractionDigits: 2 },
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm font-bold text-emerald-600">
+                    <span>Amount Paid</span>
+                    <span>
+                      - ₱{" "}
+                      {(selectedInvoice.amount_paid || 0).toLocaleString(
+                        undefined,
+                        { minimumFractionDigits: 2 },
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-3 border-t border-stone-200">
+                    <span className="text-sm font-bold text-stone-800 uppercase tracking-wider">
+                      Balance Due
+                    </span>
+                    <span
+                      className={`text-2xl font-black ${(selectedInvoice.quotation_amount || 0) - (selectedInvoice.amount_paid || 0) > 0 ? "text-rose-600" : "text-emerald-600"}`}
+                    >
+                      ₱{" "}
+                      {Math.max(
+                        0,
+                        (selectedInvoice.quotation_amount || 0) -
+                          (selectedInvoice.amount_paid || 0),
+                      ).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Print Button */}
+              <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 print:hidden">
+                <button
+                  onClick={() => setSelectedInvoice(null)}
+                  className="w-full sm:w-auto px-6 py-3 bg-white border border-stone-200 text-stone-600 font-bold text-sm rounded-xl hover:bg-stone-50 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={handlePrintInvoice}
+                  className="w-full sm:w-auto px-6 py-3 bg-emerald-600 text-white text-sm font-black rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                >
+                  <Download className="w-5 h-5" /> Download
+                </button>
+              </div>
             </div>
           </div>
         </div>

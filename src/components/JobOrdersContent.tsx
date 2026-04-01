@@ -15,10 +15,12 @@ import {
   User,
   LayoutGrid,
   List,
+  Search,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { logSystemAction } from "../utils/auditLog";
+import CreateJobModal from "./CreateJobModal";
 
 // Define a type for our Job Order data
 interface JobCardData {
@@ -71,9 +73,11 @@ interface PersonnelProfileRow {
 
 export default function JobOrdersContent() {
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [technicians, setTechnicians] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("All");
+  const [searchTerm, setSearchTerm] = useState("");
   const [technicianAvatars, setTechnicianAvatars] = useState<
     Record<string, string | null>
   >({});
@@ -276,34 +280,54 @@ export default function JobOrdersContent() {
     "Ready",
   ];
 
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+  const matchesSearch = (job: JobCardData) => {
+    if (!normalizedSearchTerm) return true;
+    return [
+      job.id,
+      job.customer,
+      job.device,
+      job.currentStatus,
+      job.priority,
+      job.techFullName,
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(normalizedSearchTerm);
+  };
+
   const filteredJobs =
     statusFilter === "All"
-      ? allJobs
-      : allJobs.filter((job) => job.currentStatus === statusFilter);
+      ? allJobs.filter(matchesSearch)
+      : allJobs.filter(
+          (job) => job.currentStatus === statusFilter && matchesSearch(job),
+        );
 
   const filteredBoardData = {
     received:
       statusFilter === "All"
-        ? boardData.received
+        ? boardData.received.filter(matchesSearch)
         : boardData.received.filter(
-            (job) => job.currentStatus === statusFilter,
+            (job) => job.currentStatus === statusFilter && matchesSearch(job),
           ),
     diagnosing:
       statusFilter === "All"
-        ? boardData.diagnosing
+        ? boardData.diagnosing.filter(matchesSearch)
         : boardData.diagnosing.filter(
-            (job) => job.currentStatus === statusFilter,
+            (job) => job.currentStatus === statusFilter && matchesSearch(job),
           ),
     inProgress:
       statusFilter === "All"
-        ? boardData.inProgress
+        ? boardData.inProgress.filter(matchesSearch)
         : boardData.inProgress.filter(
-            (job) => job.currentStatus === statusFilter,
+            (job) => job.currentStatus === statusFilter && matchesSearch(job),
           ),
     ready:
       statusFilter === "All"
-        ? boardData.ready
-        : boardData.ready.filter((job) => job.currentStatus === statusFilter),
+        ? boardData.ready.filter(matchesSearch)
+        : boardData.ready.filter(
+            (job) => job.currentStatus === statusFilter && matchesSearch(job),
+          ),
   };
 
   const totalJobs = allJobs.length;
@@ -342,6 +366,18 @@ export default function JobOrdersContent() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+            <div className="relative w-full sm:w-[260px] lg:w-[300px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search Job Order, Name, or Device..."
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 shadow-sm"
+                aria-label="Search job orders"
+              />
+            </div>
+
             <div className="flex bg-slate-100/80 p-1 rounded-xl border border-slate-200 flex-1 sm:flex-none shadow-sm">
               <button
                 onClick={() => setViewMode("board")}
@@ -473,7 +509,11 @@ export default function JobOrdersContent() {
                     ))}
                     {/* ONLY SUPER ADMINS CAN ADD QUICK ORDERS HERE */}
                     {isSuperAdmin && (
-                      <button className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 font-bold text-sm hover:border-blue-400 hover:text-blue-600 transition-colors flex items-center justify-center gap-2 bg-gray-50/50 hover:bg-blue-50/30">
+                      <button
+                        type="button"
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 font-bold text-sm hover:border-blue-400 hover:text-blue-600 transition-colors flex items-center justify-center gap-2 bg-gray-50/50 hover:bg-blue-50/30"
+                      >
                         <Plus className="w-4 h-4" /> Add Job Order
                       </button>
                     )}
@@ -704,6 +744,16 @@ export default function JobOrdersContent() {
             </div>
           )}
         </>
+      )}
+
+      {isSuperAdmin && (
+        <CreateJobModal
+          isOpen={isCreateModalOpen}
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            fetchBoardData();
+          }}
+        />
       )}
     </div>
   );
