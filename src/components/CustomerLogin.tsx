@@ -33,10 +33,16 @@ export default function CustomerLogin() {
       }
 
       // Save customer session
+      localStorage.setItem(
+        "central_juan_customer_session_started_at",
+        new Date().toISOString(),
+      );
       localStorage.setItem("central_juan_customer", JSON.stringify(data));
       navigate("/my-portal");
-    } catch (err: any) {
-      setError(err.message || "Invalid login credentials.");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Invalid login credentials.",
+      );
     } finally {
       setIsLoading(false);
     }

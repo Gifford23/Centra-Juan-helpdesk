@@ -930,23 +930,23 @@ export default function DashboardContent() {
       )}
 
       {showBarTicketsModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div
             className="absolute inset-0 bg-slate-900/55 backdrop-blur-sm"
             onClick={() => setShowBarTicketsModal(false)}
           ></div>
 
-          <div className="relative w-full max-w-5xl bg-white rounded-3xl border border-slate-200 shadow-[0_24px_55px_rgba(15,23,42,0.24)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-4 sm:px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-cyan-50/60">
-              <div className="flex items-center justify-between gap-4">
-                <div>
+          <div className="relative w-full max-w-5xl bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 shadow-[0_24px_55px_rgba(15,23,42,0.24)] overflow-hidden h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+            <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 bg-gradient-to-r from-blue-50 via-cyan-50/70 to-indigo-50/70 shrink-0">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
                   <p className="text-[11px] font-black uppercase tracking-[0.14em] text-blue-600 mb-1">
                     Daily Drilldown
                   </p>
-                  <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                  <h3 className="text-base sm:text-xl font-black text-slate-900 tracking-tight break-words">
                     Customer Tickets for {selectedBarDate}
                   </h3>
-                  <p className="text-sm text-slate-500 font-medium mt-1">
+                  <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
                     {selectedBarTickets.length} ticket
                     {selectedBarTickets.length !== 1 ? "s" : ""} found on this
                     date.
@@ -954,14 +954,14 @@ export default function DashboardContent() {
                 </div>
                 <button
                   onClick={() => setShowBarTicketsModal(false)}
-                  className="p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-white transition-colors"
+                  className="p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-white transition-colors flex-shrink-0"
                   aria-label="Close tickets modal"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="mt-3 grid grid-cols-1 sm:flex sm:flex-wrap items-start sm:items-center gap-2">
                 <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-black border bg-white text-slate-700 border-slate-200">
                   Total: {selectedBarTickets.length}
                 </span>
@@ -995,81 +995,133 @@ export default function DashboardContent() {
                 </p>
               </div>
             ) : (
-              <div className="max-h-[70vh] overflow-auto bg-slate-50/40">
-                <table className="w-full min-w-[720px] text-left border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="px-4 sm:px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border-b border-slate-200">
-                        Job Order
-                      </th>
-                      <th className="px-4 sm:px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border-b border-slate-200">
-                        Customer
-                      </th>
-                      <th className="px-4 sm:px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border-b border-slate-200">
-                        Device
-                      </th>
-                      <th className="px-4 sm:px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border-b border-slate-200">
-                        Status
-                      </th>
-                      <th className="px-4 sm:px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border-b border-slate-200">
-                        Assigned Tech
-                      </th>
-                      <th className="px-4 sm:px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border-b border-slate-200">
-                        Logged At
-                      </th>
-                      <th className="px-4 sm:px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border-b border-slate-200 text-center">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
-                    {selectedBarTickets.map((ticket) => (
-                      <tr
-                        key={ticket.id}
-                        className="hover:bg-blue-50/30 transition-colors"
-                      >
-                        <td className="px-4 sm:px-6 py-4 font-bold text-slate-900">
-                          #{ticket.id}
-                        </td>
-                        <td className="px-4 sm:px-6 py-4 text-sm text-slate-700 font-medium">
-                          {ticket.customer}
-                        </td>
-                        <td className="px-4 sm:px-6 py-4 text-sm text-slate-600 font-medium">
-                          {ticket.device}
-                        </td>
-                        <td className="px-4 sm:px-6 py-4">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusBadgeClass(ticket.status)}`}
-                          >
-                            {ticket.status}
-                          </span>
-                        </td>
-                        <td className="px-4 sm:px-6 py-4">
-                          <span
-                            className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${getTechBadgeClass(ticket.tech)}`}
-                          >
-                            {ticket.tech}
-                          </span>
-                        </td>
-                        <td className="px-4 sm:px-6 py-4 text-sm text-slate-500 font-medium">
+              <div className="flex-1 overflow-auto bg-slate-50/40">
+                <div className="md:hidden p-3 space-y-3">
+                  {selectedBarTickets.map((ticket) => (
+                    <div
+                      key={ticket.id}
+                      className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm border-l-4 ${getStatusAccentClass(ticket.status)}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-black text-slate-900">
+                            #{ticket.id}
+                          </p>
+                          <p className="text-sm text-slate-600 font-medium mt-1 break-words">
+                            {ticket.customer}
+                          </p>
+                          <p className="text-sm text-slate-500 mt-1 break-words">
+                            {ticket.device}
+                          </p>
+                        </div>
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${getStatusBadgeClass(ticket.status)}`}
+                        >
+                          {ticket.status}
+                        </span>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span
+                          className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${getTechBadgeClass(ticket.tech)}`}
+                        >
+                          {ticket.tech}
+                        </span>
+                        <span className="text-xs text-slate-500 font-medium">
                           {ticket.loggedAt}
-                        </td>
-                        <td className="px-4 sm:px-6 py-4 text-center">
-                          <button
-                            onClick={() => {
-                              setShowBarTicketsModal(false);
-                              navigate(`/job-orders/${ticket.id}`);
-                            }}
-                            className="inline-flex items-center gap-1.5 text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors font-bold text-xs"
-                            title="View Ticket Details"
-                          >
-                            <Eye className="w-4 h-4" /> View
-                          </button>
-                        </td>
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setShowBarTicketsModal(false);
+                          navigate(`/job-orders/${ticket.id}`);
+                        }}
+                        className="mt-3 w-full inline-flex items-center justify-center gap-2 text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-2.5 rounded-lg transition-colors font-bold text-sm"
+                        title="View Ticket Details"
+                      >
+                        <Eye className="w-4 h-4" /> View Ticket Details
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="hidden md:block overflow-auto">
+                  <table className="w-full min-w-[720px] text-left border-collapse">
+                    <thead>
+                      <tr>
+                        <th className="px-4 sm:px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border-b border-slate-200">
+                          Job Order
+                        </th>
+                        <th className="px-4 sm:px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border-b border-slate-200">
+                          Customer
+                        </th>
+                        <th className="px-4 sm:px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border-b border-slate-200">
+                          Device
+                        </th>
+                        <th className="px-4 sm:px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border-b border-slate-200">
+                          Status
+                        </th>
+                        <th className="px-4 sm:px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border-b border-slate-200">
+                          Assigned Tech
+                        </th>
+                        <th className="px-4 sm:px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border-b border-slate-200">
+                          Logged At
+                        </th>
+                        <th className="px-4 sm:px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-700 bg-white border-b border-slate-200 text-center">
+                          Action
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {selectedBarTickets.map((ticket) => (
+                        <tr
+                          key={ticket.id}
+                          className="hover:bg-blue-50/30 transition-colors"
+                        >
+                          <td className="px-4 sm:px-6 py-4 font-bold text-slate-900">
+                            #{ticket.id}
+                          </td>
+                          <td className="px-4 sm:px-6 py-4 text-sm text-slate-700 font-medium">
+                            {ticket.customer}
+                          </td>
+                          <td className="px-4 sm:px-6 py-4 text-sm text-slate-600 font-medium">
+                            {ticket.device}
+                          </td>
+                          <td className="px-4 sm:px-6 py-4">
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusBadgeClass(ticket.status)}`}
+                            >
+                              {ticket.status}
+                            </span>
+                          </td>
+                          <td className="px-4 sm:px-6 py-4">
+                            <span
+                              className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${getTechBadgeClass(ticket.tech)}`}
+                            >
+                              {ticket.tech}
+                            </span>
+                          </td>
+                          <td className="px-4 sm:px-6 py-4 text-sm text-slate-500 font-medium">
+                            {ticket.loggedAt}
+                          </td>
+                          <td className="px-4 sm:px-6 py-4 text-center">
+                            <button
+                              onClick={() => {
+                                setShowBarTicketsModal(false);
+                                navigate(`/job-orders/${ticket.id}`);
+                              }}
+                              className="inline-flex items-center gap-1.5 text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors font-bold text-xs"
+                              title="View Ticket Details"
+                            >
+                              <Eye className="w-4 h-4" /> View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

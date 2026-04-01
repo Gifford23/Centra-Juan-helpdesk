@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./components/AdminLayout";
 import DashboardContent from "./components/DashboardContent";
@@ -20,10 +21,132 @@ import AccountsReceivableContent from "./components/AccountsReceivableContent";
 // --- NEW CUSTOMER PORTAL IMPORTS ---
 import CustomerLogin from "./components/CustomerLogin";
 import CustomerDashboard from "./components/CustomerDashboard";
+import { supabase } from "./lib/supabase";
+
+const FORCE_LOGOUT_ACTION = "Triggered force logout signal";
+
+const isRevoked = (
+  latestForceLogoutAt: string | null,
+  sessionStartedAt: string | null,
+) => {
+  if (!latestForceLogoutAt) return false;
+  if (!sessionStartedAt) return true;
+
+  return (
+    new Date(latestForceLogoutAt).getTime() >=
+    new Date(sessionStartedAt).getTime()
+  );
+};
+
+const clearAllKnownSessions = () => {
+  localStorage.removeItem("central_juan_user");
+  localStorage.removeItem("central_juan_customer");
+  localStorage.removeItem("central_juan_user_session_started_at");
+  localStorage.removeItem("central_juan_customer_session_started_at");
+};
 
 // --- Protected Route Wrappers ---
 // This component checks if an ADMIN is logged in before rendering the page.
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const [isChecking, setIsChecking] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const validateSession = async () => {
+      const savedUser = localStorage.getItem("central_juan_user");
+      if (!savedUser) {
+        if (isMounted) {
+          setIsAuthorized(false);
+          setIsChecking(false);
+        }
+        return;
+      }
+
+      try {
+        const userSessionStartedAt = localStorage.getItem(
+          "central_juan_user_session_started_at",
+        );
+        const { data, error } = await supabase
+          .from("system_logs")
+          .select("created_at")
+          .eq("action", FORCE_LOGOUT_ACTION)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        const latestForceLogoutAt = data?.created_at || null;
+        if (isRevoked(latestForceLogoutAt, userSessionStartedAt)) {
+          clearAllKnownSessions();
+          window.dispatchEvent(new Event("central_juan_force_logout_applied"));
+          if (isMounted) {
+            setIsAuthorized(false);
+            setIsChecking(false);
+          }
+          return;
+        }
+
+        if (isMounted) {
+          setIsAuthorized(true);
+          setIsChecking(false);
+        }
+      } catch (error) {
+        console.error("Session validation error (admin):", error);
+        if (isMounted) {
+          setIsAuthorized(true);
+          setIsChecking(false);
+        }
+      }
+    };
+
+    validateSession();
+
+    const channel = supabase
+      .channel("force-logout-admin-listener")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "system_logs" },
+        (payload) => {
+          if (payload.new?.action === FORCE_LOGOUT_ACTION) {
+            validateSession();
+          }
+        },
+      )
+      .subscribe();
+
+    const intervalId = window.setInterval(validateSession, 15000);
+    window.addEventListener("focus", validateSession);
+    window.addEventListener("storage", validateSession);
+    window.addEventListener("central_juan_force_logout_all", validateSession);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+      window.removeEventListener("focus", validateSession);
+      window.removeEventListener("storage", validateSession);
+      window.removeEventListener(
+        "central_juan_force_logout_all",
+        validateSession,
+      );
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-500 font-medium">
+        Verifying session...
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return <Navigate to="/login" replace />;
+  }
+
   const savedUser = localStorage.getItem("central_juan_user");
 
   if (!savedUser) {
@@ -41,6 +164,105 @@ const CustomerProtectedRoute = ({
 }: {
   children: React.ReactNode;
 }) => {
+  const [isChecking, setIsChecking] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const validateSession = async () => {
+      const savedCustomer = localStorage.getItem("central_juan_customer");
+      if (!savedCustomer) {
+        if (isMounted) {
+          setIsAuthorized(false);
+          setIsChecking(false);
+        }
+        return;
+      }
+
+      try {
+        const customerSessionStartedAt = localStorage.getItem(
+          "central_juan_customer_session_started_at",
+        );
+        const { data, error } = await supabase
+          .from("system_logs")
+          .select("created_at")
+          .eq("action", FORCE_LOGOUT_ACTION)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        const latestForceLogoutAt = data?.created_at || null;
+        if (isRevoked(latestForceLogoutAt, customerSessionStartedAt)) {
+          clearAllKnownSessions();
+          window.dispatchEvent(new Event("central_juan_force_logout_applied"));
+          if (isMounted) {
+            setIsAuthorized(false);
+            setIsChecking(false);
+          }
+          return;
+        }
+
+        if (isMounted) {
+          setIsAuthorized(true);
+          setIsChecking(false);
+        }
+      } catch (error) {
+        console.error("Session validation error (customer):", error);
+        if (isMounted) {
+          setIsAuthorized(true);
+          setIsChecking(false);
+        }
+      }
+    };
+
+    validateSession();
+
+    const channel = supabase
+      .channel("force-logout-customer-listener")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "system_logs" },
+        (payload) => {
+          if (payload.new?.action === FORCE_LOGOUT_ACTION) {
+            validateSession();
+          }
+        },
+      )
+      .subscribe();
+
+    const intervalId = window.setInterval(validateSession, 15000);
+    window.addEventListener("focus", validateSession);
+    window.addEventListener("storage", validateSession);
+    window.addEventListener("central_juan_force_logout_all", validateSession);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+      window.removeEventListener("focus", validateSession);
+      window.removeEventListener("storage", validateSession);
+      window.removeEventListener(
+        "central_juan_force_logout_all",
+        validateSession,
+      );
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-500 font-medium">
+        Verifying session...
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return <Navigate to="/portal-login" replace />;
+  }
+
   const savedCustomer = localStorage.getItem("central_juan_customer");
 
   if (!savedCustomer) {

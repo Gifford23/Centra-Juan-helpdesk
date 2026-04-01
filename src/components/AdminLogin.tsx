@@ -146,6 +146,10 @@ export default function AdminLogin() {
       }
 
       // 4. Success! Save user data locally so the Dashboard knows who is logged in
+      localStorage.setItem(
+        "central_juan_user_session_started_at",
+        new Date().toISOString(),
+      );
       localStorage.setItem("central_juan_user", JSON.stringify(data));
 
       await logSystemAction({

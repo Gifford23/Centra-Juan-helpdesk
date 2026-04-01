@@ -796,6 +796,9 @@ export default function AdminLayout({
                       } finally {
                         // 5. CLEAR SAVED SESSION ON LOGOUT
                         localStorage.removeItem("central_juan_user");
+                        localStorage.removeItem(
+                          "central_juan_user_session_started_at",
+                        );
                         setShowProfile(false);
                         navigate("/login");
                         setIsSigningOut(false);

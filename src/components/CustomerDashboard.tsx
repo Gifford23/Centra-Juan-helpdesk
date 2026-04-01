@@ -394,6 +394,7 @@ export default function CustomerDashboard() {
     setIsSigningOut(true);
     await new Promise((resolve) => setTimeout(resolve, 650));
     localStorage.removeItem("central_juan_customer");
+    localStorage.removeItem("central_juan_customer_session_started_at");
     navigate("/portal-login");
   };
 
