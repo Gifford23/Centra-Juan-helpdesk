@@ -1,4 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  type ChangeEvent,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LogOut,
@@ -9,7 +15,6 @@ import {
   Activity,
   Search,
   RefreshCw,
-  Camera,
   FileText,
   Check,
   MessageSquare,
@@ -21,6 +26,8 @@ import {
   ArrowRight,
   Menu,
   X,
+  ChevronDown,
+  UserRound,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import technician from "../assets/technician.png";
@@ -176,7 +183,17 @@ export default function CustomerDashboard() {
   >("all");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [showMobileMePanel, setShowMobileMePanel] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showMobileMoreSidebar, setShowMobileMoreSidebar] = useState(false);
+  const [showEditProfileDialog, setShowEditProfileDialog] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [editProfileName, setEditProfileName] = useState("");
+  const [editProfileEmail, setEditProfileEmail] = useState("");
+  const [editProfileAvatarFile, setEditProfileAvatarFile] =
+    useState<File | null>(null);
+  const [editProfileAvatarPreview, setEditProfileAvatarPreview] = useState<
+    string | null
+  >(null);
 
   const playNotificationSound = useCallback(() => {
     try {
@@ -217,9 +234,15 @@ export default function CustomerDashboard() {
 
   const [customerReply, setCustomerReply] = useState("");
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [showQuotationResultDialog, setShowQuotationResultDialog] =
+    useState(false);
+  const [quotationResultTitle, setQuotationResultTitle] = useState("");
+  const [quotationResultMessage, setQuotationResultMessage] = useState("");
+  const [isQuotationResultError, setIsQuotationResultError] = useState(false);
 
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const quotationNotifiedRef = useRef<Set<string>>(new Set());
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+  const avatarObjectUrlRef = useRef<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -227,6 +250,7 @@ export default function CustomerDashboard() {
     JSON.parse(localStorage.getItem("central_juan_customer") || "{}"),
   );
   const customerId = customerProfile.id;
+  const quotationNoticeStorageKey = `central_juan_notified_quotations_${customerId || "default"}`;
 
   const fetchMyTickets = useCallback(
     async (silent = false) => {
@@ -378,7 +402,12 @@ export default function CustomerDashboard() {
 
   useEffect(() => {
     const prev = document.body.style.overflow;
-    if (selectedQuotation || selectedInvoice) {
+    if (
+      selectedQuotation ||
+      selectedInvoice ||
+      showEditProfileDialog ||
+      showMobileMoreSidebar
+    ) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = prev;
@@ -386,7 +415,12 @@ export default function CustomerDashboard() {
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [selectedQuotation, selectedInvoice]);
+  }, [
+    selectedQuotation,
+    selectedInvoice,
+    showEditProfileDialog,
+    showMobileMoreSidebar,
+  ]);
 
   const openProgressView = (ticket: Ticket) => {
     setProgressTicket(ticket);
@@ -402,37 +436,121 @@ export default function CustomerDashboard() {
     navigate("/portal-login");
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const openEditProfileDialog = () => {
+    setEditProfileName(customerProfile.full_name || "");
+    setEditProfileEmail(customerProfile.email || "");
+    setEditProfileAvatarFile(null);
+    setEditProfileAvatarPreview(customerProfile.avatar_url || null);
+    setShowEditProfileDialog(true);
+  };
+
+  const handleEditProfileAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setIsQuotationResultError(true);
+      setQuotationResultTitle("Invalid File");
+      setQuotationResultMessage("Please upload a valid image file.");
+      setShowQuotationResultDialog(true);
+      return;
+    }
+
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    avatarObjectUrlRef.current = previewUrl;
+    setEditProfileAvatarFile(file);
+    setEditProfileAvatarPreview(previewUrl);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (avatarObjectUrlRef.current) {
+        URL.revokeObjectURL(avatarObjectUrlRef.current);
+      }
+    };
+  }, []);
+
+  const handleSaveProfile = async () => {
+    if (!customerId) return;
+
+    const fullName = editProfileName.trim();
+    const email = editProfileEmail.trim();
+    let newAvatarUrl = customerProfile.avatar_url || "";
+
+    if (!fullName) {
+      setIsQuotationResultError(true);
+      setQuotationResultTitle("Missing Name");
+      setQuotationResultMessage("Please enter your full name before saving.");
+      setShowQuotationResultDialog(true);
+      return;
+    }
+
     try {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      setIsUploadingAvatar(true);
-      const fileExt = file.name.split(".").pop();
-      const fileName = `customer-${customerProfile.id}-${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(fileName, file);
-      if (uploadError) throw uploadError;
-      const { data: publicUrlData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(fileName);
-      const newAvatarUrl = publicUrlData.publicUrl;
-      const { error: dbError } = await supabase
+      setIsSavingProfile(true);
+
+      if (editProfileAvatarFile) {
+        const fileExt = editProfileAvatarFile.name.split(".").pop() || "jpg";
+        const fileName = `${customerId}-${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(fileName, editProfileAvatarFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(fileName);
+
+        newAvatarUrl = publicUrlData.publicUrl;
+      }
+
+      const { error } = await supabase
         .from("customers")
-        .update({ avatar_url: newAvatarUrl })
-        .eq("id", customerProfile.id);
-      if (dbError) throw dbError;
-      const updatedCustomer = { ...customerProfile, avatar_url: newAvatarUrl };
-      setCustomerProfile(updatedCustomer);
+        .update({
+          full_name: fullName,
+          email: email || null,
+          avatar_url: newAvatarUrl || null,
+        })
+        .eq("id", customerId);
+
+      if (error) throw error;
+
+      const updatedProfile = {
+        ...customerProfile,
+        full_name: fullName,
+        email,
+        avatar_url: newAvatarUrl,
+      };
+
+      setCustomerProfile(updatedProfile);
       localStorage.setItem(
         "central_juan_customer",
-        JSON.stringify(updatedCustomer),
+        JSON.stringify(updatedProfile),
       );
+      setEditProfileAvatarFile(null);
+      setShowEditProfileDialog(false);
+
+      setIsQuotationResultError(false);
+      setQuotationResultTitle("Profile Updated");
+      setQuotationResultMessage(
+        "Your profile details were saved successfully.",
+      );
+      setShowQuotationResultDialog(true);
     } catch (error) {
-      console.error("Error uploading avatar:", error);
-      alert("Failed to upload profile picture. Please try again.");
+      console.error("Error updating customer profile:", error);
+      setIsQuotationResultError(true);
+      setQuotationResultTitle("Update Failed");
+      setQuotationResultMessage(
+        "Unable to update your profile right now. Please try again.",
+      );
+      setShowQuotationResultDialog(true);
     } finally {
-      setIsUploadingAvatar(false);
+      setIsSavingProfile(false);
     }
   };
 
@@ -454,9 +572,25 @@ export default function CustomerDashboard() {
       fetchMyTickets();
       setCustomerReply("");
       setSelectedQuotation(null);
-      alert(`Quotation ${response}!`);
+
+      setIsQuotationResultError(false);
+      setQuotationResultTitle(
+        response === "Accepted" ? "Quotation Confirmed" : "Quotation Declined",
+      );
+      setQuotationResultMessage(
+        response === "Accepted"
+          ? "Your confirmation was sent to the admin successfully."
+          : "Your decline response was sent to the admin successfully.",
+      );
+      setShowQuotationResultDialog(true);
     } catch (error) {
       console.error("Error responding to quotation:", error);
+      setIsQuotationResultError(true);
+      setQuotationResultTitle("Action Failed");
+      setQuotationResultMessage(
+        "Unable to submit your quotation response. Please try again.",
+      );
+      setShowQuotationResultDialog(true);
     } finally {
       setIsSubmittingReply(false);
     }
@@ -486,6 +620,68 @@ export default function CustomerDashboard() {
   const hasQuotationProcess = quotationTickets.length > 0;
   const hasInvoiceProcess = generatedInvoices.length > 0;
   const unreadNotificationCount = notifications.length;
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(quotationNoticeStorageKey);
+      if (!raw) {
+        quotationNotifiedRef.current = new Set();
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as string[];
+      quotationNotifiedRef.current = new Set(parsed);
+    } catch {
+      quotationNotifiedRef.current = new Set();
+    }
+  }, [quotationNoticeStorageKey]);
+
+  useEffect(() => {
+    if (!customerId || pendingQuotations.length === 0) return;
+
+    const newMessages: string[] = [];
+
+    pendingQuotations.forEach((ticket) => {
+      const ticketKey = String(ticket.job_order_no ?? ticket.id ?? "");
+      if (!ticketKey || quotationNotifiedRef.current.has(ticketKey)) return;
+
+      quotationNotifiedRef.current.add(ticketKey);
+      newMessages.push(
+        `Quotation ready for ticket #${ticketKey}. Please review and confirm.`,
+      );
+    });
+
+    if (newMessages.length === 0) return;
+
+    localStorage.setItem(
+      quotationNoticeStorageKey,
+      JSON.stringify(Array.from(quotationNotifiedRef.current)),
+    );
+
+    setNotifications((prev) => [...newMessages, ...prev].slice(0, 50));
+    setNewNotificationPulse(true);
+    playNotificationSound();
+    const timer = window.setTimeout(() => setNewNotificationPulse(false), 1600);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    customerId,
+    pendingQuotations,
+    quotationNoticeStorageKey,
+    playNotificationSound,
+  ]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (!profileDropdownRef.current) return;
+      if (!profileDropdownRef.current.contains(event.target as Node)) {
+        setShowProfileDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   useEffect(() => {
     if (activeTab === "quotations" && !hasQuotationProcess) {
@@ -669,60 +865,85 @@ export default function CustomerDashboard() {
               )}
             </div>
 
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="image/*"
-              className="hidden"
-              onChange={handleAvatarUpload}
-            />
-
-            <div className="hidden md:flex items-center gap-3 pl-3 sm:pl-4 border-l border-stone-200">
-              <div
-                className="relative group cursor-pointer"
-                onClick={() => fileInputRef.current?.click()}
-                title="Change Profile Picture"
+            <div
+              ref={profileDropdownRef}
+              className="relative pl-1 sm:pl-3 sm:border-l sm:border-stone-200"
+            >
+              <button
+                type="button"
+                onClick={() => setShowProfileDropdown((v) => !v)}
+                className="flex items-center gap-2 rounded-xl px-1.5 py-1 hover:bg-stone-100 transition-colors"
+                aria-label="Open profile menu"
               >
-                {isUploadingAvatar ? (
-                  <div className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center border border-stone-200">
-                    <Loader2 className="w-4 h-4 text-amber-600 animate-spin" />
-                  </div>
-                ) : customerProfile.avatar_url ? (
+                {customerProfile.avatar_url ? (
                   <img
                     src={customerProfile.avatar_url}
                     alt="Profile"
-                    className="w-9 h-9 rounded-full object-cover border border-stone-200 shadow-sm group-hover:opacity-80 transition-opacity"
+                    className="w-9 h-9 rounded-full object-cover border border-stone-200 shadow-sm"
                   />
                 ) : (
-                  <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm shadow-sm group-hover:bg-amber-200 transition-colors">
-                    {customerProfile.full_name?.charAt(0).toUpperCase()}
+                  <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm shadow-sm">
+                    {customerProfile.full_name?.charAt(0).toUpperCase() || "C"}
                   </div>
                 )}
-                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow border border-stone-200 hidden group-hover:block transition-all">
-                  <Camera className="w-3 h-3 text-stone-600" />
-                </div>
-              </div>
-
-              <div className="hidden md:block">
-                <p className="text-sm font-bold text-stone-900 leading-none">
-                  {customerProfile.full_name}
-                </p>
-              </div>
-              <button
-                onClick={handleLogout}
-                disabled={isSigningOut}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-stone-200 text-sm font-semibold text-stone-700 hover:bg-stone-50 disabled:opacity-70 disabled:cursor-not-allowed transition-colors ml-1"
-                title="Sign out"
-              >
-                {isSigningOut ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <LogOut className="w-4 h-4" />
-                )}
-                <span className="hidden sm:inline">
-                  {isSigningOut ? "Signing out..." : "Sign Out"}
-                </span>
+                <ChevronDown className="w-4 h-4 text-stone-500" />
               </button>
+
+              {showProfileDropdown && (
+                <div className="absolute right-0 mt-2 w-52 rounded-xl border border-stone-200 bg-white p-2 shadow-xl z-50">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProfileDropdown(false);
+                      openEditProfileDialog();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-stone-700 hover:bg-stone-100 transition-colors"
+                  >
+                    <UserRound className="w-4 h-4 text-amber-600" />
+                    Edit Profile
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProfileDropdown(false);
+                      navigate("/track");
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-stone-700 hover:bg-stone-100 transition-colors"
+                  >
+                    <Activity className="w-4 h-4 text-indigo-600" />
+                    Track Status
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProfileDropdown(false);
+                      navigate("/submit-ticket");
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-stone-700 hover:bg-stone-100 transition-colors"
+                  >
+                    <FileText className="w-4 h-4 text-blue-600" />
+                    Submit Ticket
+                  </button>
+
+                  <div className="my-1 h-px bg-stone-200" />
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={isSigningOut}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-70"
+                  >
+                    {isSigningOut ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <LogOut className="w-4 h-4" />
+                    )}
+                    {isSigningOut ? "Signing out..." : "Sign Out"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1233,92 +1454,6 @@ export default function CustomerDashboard() {
         )}
       </main>
 
-      {showMobileMePanel && (
-        <div className="fixed inset-0 z-[55] md:hidden print:hidden">
-          <button
-            type="button"
-            className="absolute inset-0 bg-stone-900/45"
-            onClick={() => setShowMobileMePanel(false)}
-            aria-label="Close Me panel"
-          />
-
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl border border-stone-200 bg-white p-5 shadow-2xl">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-stone-400">
-                  Me
-                </p>
-                <h3 className="text-xl font-black text-stone-900 mt-1">
-                  {customerProfile.full_name || "My Profile"}
-                </h3>
-                <p className="text-sm text-stone-500 font-medium mt-0.5">
-                  {customerProfile.email || "Customer account"}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowMobileMePanel(false)}
-                className="rounded-full p-2 text-stone-500 hover:bg-stone-100"
-                aria-label="Close profile menu"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="mt-5 flex items-center gap-3 rounded-2xl border border-stone-200 bg-stone-50 p-3">
-              <button
-                type="button"
-                className="relative group"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {isUploadingAvatar ? (
-                  <div className="w-12 h-12 rounded-full bg-white border border-stone-200 flex items-center justify-center">
-                    <Loader2 className="w-5 h-5 text-amber-600 animate-spin" />
-                  </div>
-                ) : customerProfile.avatar_url ? (
-                  <img
-                    src={customerProfile.avatar_url}
-                    alt="Profile"
-                    className="w-12 h-12 rounded-full object-cover border border-stone-200"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-black">
-                    {customerProfile.full_name?.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <span className="absolute -bottom-1 -right-1 rounded-full bg-white border border-stone-200 p-1">
-                  <Camera className="w-3 h-3 text-stone-600" />
-                </span>
-              </button>
-
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-stone-900 truncate">
-                  {customerProfile.full_name}
-                </p>
-                <p className="text-xs text-stone-500 font-medium">
-                  Tap image to update profile photo
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={isSigningOut}
-              className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-rose-600 text-white font-bold text-sm hover:bg-rose-700 disabled:opacity-70"
-            >
-              {isSigningOut ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <LogOut className="w-4 h-4" />
-              )}
-              {isSigningOut ? "Signing out..." : "Sign Out"}
-            </button>
-          </div>
-        </div>
-      )}
-
       {!selectedQuotation && !selectedInvoice && (
         <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-stone-200 bg-white/95 backdrop-blur md:hidden print:hidden">
           <div className="grid grid-cols-5 gap-1 px-2 py-2">
@@ -1360,14 +1495,290 @@ export default function CustomerDashboard() {
 
             <button
               type="button"
-              onClick={() => setShowMobileMePanel(true)}
-              className={`flex flex-col items-center justify-center rounded-xl py-1.5 text-[11px] font-semibold transition-colors ${showMobileMePanel ? "text-stone-900 bg-stone-100" : "text-stone-500"}`}
+              onClick={() => {
+                setShowProfileDropdown(false);
+                setShowMobileMoreSidebar(true);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className={`flex flex-col items-center justify-center rounded-xl py-1.5 text-[11px] font-semibold transition-colors ${showMobileMoreSidebar ? "text-stone-900 bg-stone-100" : "text-stone-500"}`}
             >
               <Menu className="w-5 h-5" />
-              Me
+              More
             </button>
           </div>
         </nav>
+      )}
+
+      {showMobileMoreSidebar && (
+        <div className="fixed inset-0 z-[75] md:hidden print:hidden">
+          <button
+            type="button"
+            onClick={() => setShowMobileMoreSidebar(false)}
+            className="absolute inset-0 bg-stone-900/45"
+            aria-label="Close more menu"
+          />
+
+          <aside className="absolute right-0 top-0 h-full w-[84vw] max-w-xs border-l border-stone-200 bg-white shadow-2xl animate-in slide-in-from-right duration-200">
+            <div className="flex items-center justify-between border-b border-stone-200 px-4 py-4">
+              <h3 className="text-base font-black text-stone-900">More</h3>
+              <button
+                type="button"
+                onClick={() => setShowMobileMoreSidebar(false)}
+                className="rounded-full p-2 text-stone-500 hover:bg-stone-100"
+                aria-label="Close sidebar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div className="flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 p-3">
+                {customerProfile.avatar_url ? (
+                  <img
+                    src={customerProfile.avatar_url}
+                    alt="Profile"
+                    className="h-10 w-10 rounded-full object-cover border border-stone-200"
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm border border-amber-200">
+                    {customerProfile.full_name?.charAt(0).toUpperCase() || "C"}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-stone-900">
+                    {customerProfile.full_name || "Customer"}
+                  </p>
+                  <p className="truncate text-xs font-medium text-stone-500">
+                    {customerProfile.email || "No email set"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMobileMoreSidebar(false);
+                    openEditProfileDialog();
+                  }}
+                  className="w-full flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold text-stone-700 hover:bg-stone-100"
+                >
+                  <UserRound className="w-4 h-4 text-amber-600" />
+                  Edit Profile
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMobileMoreSidebar(false);
+                    navigate("/track");
+                  }}
+                  className="w-full flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold text-stone-700 hover:bg-stone-100"
+                >
+                  <Activity className="w-4 h-4 text-indigo-600" />
+                  Track Status
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMobileMoreSidebar(false);
+                    navigate("/submit-ticket");
+                  }}
+                  className="w-full flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold text-stone-700 hover:bg-stone-100"
+                >
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  Submit Ticket
+                </button>
+              </div>
+
+              <div className="h-px bg-stone-200" />
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMobileMoreSidebar(false);
+                  handleLogout();
+                }}
+                disabled={isSigningOut}
+                className="w-full flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-70"
+              >
+                {isSigningOut ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <LogOut className="w-4 h-4" />
+                )}
+                {isSigningOut ? "Signing out..." : "Sign Out"}
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {showQuotationResultDialog && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+          <button
+            type="button"
+            onClick={() => setShowQuotationResultDialog(false)}
+            className="absolute inset-0 bg-stone-900/50"
+            aria-label="Close response dialog"
+          />
+
+          <div className="relative w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-black text-stone-900">
+                  {quotationResultTitle}
+                </h3>
+                <p className="mt-1 text-sm font-medium text-stone-600">
+                  {quotationResultMessage}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowQuotationResultDialog(false)}
+                className="rounded-full p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+                aria-label="Close dialog"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowQuotationResultDialog(false)}
+              className={`mt-5 w-full rounded-xl px-4 py-2.5 text-sm font-bold text-white ${
+                isQuotationResultError
+                  ? "bg-rose-600 hover:bg-rose-700"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showEditProfileDialog && (
+        <div className="fixed inset-0 z-[85] flex items-center justify-center p-4">
+          <button
+            type="button"
+            onClick={() => setShowEditProfileDialog(false)}
+            className="absolute inset-0 bg-stone-900/50"
+            aria-label="Close edit profile dialog"
+          />
+
+          <div className="relative w-full max-w-md rounded-2xl border border-stone-200 bg-white p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-black text-stone-900">
+                  Edit Profile
+                </h3>
+                <p className="mt-1 text-sm font-medium text-stone-600">
+                  Update your account details used in the portal.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowEditProfileDialog(false)}
+                className="rounded-full p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+                aria-label="Close dialog"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-stone-500">
+                  Full Name
+                </span>
+                <input
+                  type="text"
+                  value={editProfileName}
+                  onChange={(e) => setEditProfileName(e.target.value)}
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm font-medium text-stone-900 outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Your full name"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-stone-500">
+                  Email Address
+                </span>
+                <input
+                  type="email"
+                  value={editProfileEmail}
+                  onChange={(e) => setEditProfileEmail(e.target.value)}
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm font-medium text-stone-900 outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="you@example.com"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-stone-500">
+                  Profile Photo
+                </span>
+                <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
+                  <div className="flex items-center gap-3">
+                    {editProfileAvatarPreview ? (
+                      <img
+                        src={editProfileAvatarPreview}
+                        alt="Avatar preview"
+                        className="h-14 w-14 rounded-full object-cover border border-stone-200"
+                      />
+                    ) : (
+                      <div className="h-14 w-14 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-base border border-amber-200">
+                        {editProfileName?.trim().charAt(0).toUpperCase() ||
+                          customerProfile.full_name?.charAt(0).toUpperCase() ||
+                          "C"}
+                      </div>
+                    )}
+
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEditProfileAvatarChange}
+                        className="block w-full text-xs text-stone-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-blue-700"
+                      />
+                      <p className="mt-1 text-[11px] font-medium text-stone-500">
+                        Upload JPG, PNG, or WEBP image.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setShowEditProfileDialog(false)}
+                className="rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-bold text-stone-700 hover:bg-stone-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveProfile}
+                disabled={isSavingProfile}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-70"
+              >
+                {isSavingProfile ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* DETAILED QUOTATION (PDF STYLE) MODAL */}

@@ -13,6 +13,7 @@ import {
   Tag,
   Cpu,
   UserCog,
+  UserRound,
   Clock3,
   Maximize2,
   X,
@@ -222,7 +223,7 @@ export default function JobOrderDetails() {
               <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
                 Ticket #{jobData.job_order_no}
               </h1>
-              <p className="text-slate-500 text-sm mt-0.5 font-semibold tracking-wide">
+              <p className="text-slate-500 text-xs sm:text-sm mt-0.5 font-semibold tracking-wide whitespace-nowrap">
                 Tracking ID:{" "}
                 <span className="font-black text-blue-600">
                   {jobData.tracking_id || "N/A"}
@@ -238,16 +239,16 @@ export default function JobOrderDetails() {
               <span className="w-1.5 h-1.5 rounded-full bg-current/70 mr-1.5 mt-1" />
               {jobData.status}
             </span>
-            <div className="flex gap-2 w-full lg:w-auto">
+            <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
               <button
                 onClick={() => printJobOrder(jobData.job_order_no.toString())}
-                className="flex-1 lg:flex-none flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm"
+                className="w-full h-11 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm"
               >
                 <Printer className="w-4 h-4" /> Ticket
               </button>
               <button
                 onClick={() => printCSR(jobData.job_order_no.toString())}
-                className="flex-1 lg:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl font-black transition-all shadow-md shadow-emerald-500/25 active:scale-95"
+                className="w-full h-11 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-4 rounded-xl font-black transition-all shadow-md shadow-emerald-500/25 active:scale-95"
               >
                 <FileText className="w-4 h-4" /> Print CSR
               </button>
@@ -257,36 +258,36 @@ export default function JobOrderDetails() {
 
         <div className="relative mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="rounded-2xl border border-rose-200/70 bg-rose-50/70 px-4 py-3 shadow-sm">
-            <p className="text-[11px] uppercase tracking-[0.14em] font-black text-rose-500">
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.14em] font-black text-rose-500">
               Priority
             </p>
             <p
-              className={`text-xl font-black mt-1 ${isHighPriority ? "text-rose-600" : "text-slate-900"}`}
+              className={`text-lg sm:text-xl font-black mt-1 ${isHighPriority ? "text-rose-600" : "text-slate-900"}`}
             >
               {jobData.priority || "Normal"}
             </p>
           </div>
           <div className="rounded-2xl border border-blue-200/70 bg-blue-50/70 px-4 py-3 shadow-sm">
-            <p className="text-[11px] uppercase tracking-[0.14em] font-black text-blue-500">
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.14em] font-black text-blue-500">
               Technician
             </p>
-            <p className="text-xl font-black text-blue-700 mt-1 truncate">
+            <p className="text-lg sm:text-xl font-black text-blue-700 mt-1 truncate">
               {jobData.assigned_tech || "Unassigned"}
             </p>
           </div>
           <div className="rounded-2xl border border-cyan-200/70 bg-cyan-50/70 px-4 py-3 shadow-sm">
-            <p className="text-[11px] uppercase tracking-[0.14em] font-black text-cyan-600">
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.14em] font-black text-cyan-600">
               Device Type
             </p>
-            <p className="text-xl font-black text-cyan-700 mt-1 truncate">
+            <p className="text-lg sm:text-xl font-black text-cyan-700 mt-1 truncate">
               {jobData.device_type || "N/A"}
             </p>
           </div>
           <div className="rounded-2xl border border-indigo-200/70 bg-indigo-50/70 px-4 py-3 shadow-sm">
-            <p className="text-[11px] uppercase tracking-[0.14em] font-black text-indigo-500">
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.14em] font-black text-indigo-500">
               Date Logged
             </p>
-            <p className="text-base sm:text-lg font-black text-indigo-700 mt-1">
+            <p className="text-sm sm:text-lg font-black text-indigo-700 mt-1">
               {new Date(jobData.created_at).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
@@ -309,36 +310,37 @@ export default function JobOrderDetails() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
               <div>
-                <p className="text-xs text-slate-500 font-semibold mb-1">
+                <p className="text-[11px] sm:text-xs text-slate-500 font-semibold mb-1">
                   Full Name
                 </p>
-                <p className="font-black text-slate-900">
+                <p className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-1.5">
+                  <UserRound className="w-3.5 h-3.5 text-slate-400" />
                   {customerInfo?.full_name || "Unknown Customer"}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-semibold mb-1">
+                <p className="text-[11px] sm:text-xs text-slate-500 font-semibold mb-1">
                   Phone Number
                 </p>
-                <p className="font-black text-slate-900 flex items-center gap-1.5">
+                <p className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5 text-slate-400" />
                   {customerInfo?.phone_number || "N/A"}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-semibold mb-1">
+                <p className="text-[11px] sm:text-xs text-slate-500 font-semibold mb-1">
                   Email Address
                 </p>
-                <p className="font-black text-slate-900 flex items-center gap-1.5">
+                <p className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5 text-slate-400" />
                   {customerInfo?.email || "N/A"}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-semibold mb-1">
+                <p className="text-[11px] sm:text-xs text-slate-500 font-semibold mb-1">
                   Home Address
                 </p>
-                <p className="font-black text-slate-900 flex items-start gap-1.5">
+                <p className="text-sm sm:text-base leading-snug font-black text-slate-900 flex items-start gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5" />
                   {customerInfo?.address || "N/A"}
                 </p>

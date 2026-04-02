@@ -32,6 +32,7 @@ type NotificationItem = {
 type JobNotificationRow = {
   job_order_no: number;
   created_at: string;
+  quotation_status?: string | null;
   customers: { full_name: string } | { full_name: string }[] | null;
 };
 
@@ -126,6 +127,20 @@ export default function AdminLayout({
     };
   };
 
+  const buildQuotationConfirmedNotification = (
+    job: Pick<JobNotificationRow, "job_order_no" | "customers">,
+  ): NotificationItem => {
+    const customer = Array.isArray(job.customers)
+      ? job.customers[0]?.full_name
+      : job.customers?.full_name;
+
+    return {
+      id: `quote-confirmed-${job.job_order_no}`,
+      message: `Quotation confirmed for ticket #${job.job_order_no}${customer ? ` by ${customer}` : ""}`,
+      createdAt: new Date().toISOString(),
+    };
+  };
+
   const playNotificationTing = useCallback(() => {
     const audio = notificationAudioRef.current;
     if (!audio) return;
@@ -214,9 +229,27 @@ export default function AdminLayout({
       if (error) throw error;
 
       if (data) {
-        setNotifications(
-          (data as JobNotificationRow[]).map(mapRowToNotification),
+        const fetchedNotifications = (data as JobNotificationRow[]).map(
+          mapRowToNotification,
         );
+
+        setNotifications((prev) => {
+          const merged = [...prev];
+
+          fetchedNotifications.forEach((item) => {
+            if (!merged.some((existing) => existing.id === item.id)) {
+              merged.push(item);
+            }
+          });
+
+          return merged
+            .sort(
+              (a, b) =>
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime(),
+            )
+            .slice(0, 10);
+        });
       }
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -292,6 +325,52 @@ export default function AdminLayout({
             playNotificationTing();
           } catch (error) {
             console.error("Error handling new notification:", error);
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "job_orders" },
+        async (payload) => {
+          const oldStatus = payload.old?.quotation_status as
+            | string
+            | null
+            | undefined;
+          const newStatus = payload.new?.quotation_status as
+            | string
+            | null
+            | undefined;
+
+          if (oldStatus === newStatus || newStatus !== "Accepted") {
+            return;
+          }
+
+          const updatedJobOrderNo = payload.new?.job_order_no;
+          if (!updatedJobOrderNo) return;
+
+          try {
+            const { data, error } = await supabase
+              .from("job_orders")
+              .select(
+                `
+                  job_order_no,
+                  customers ( full_name )
+                `,
+              )
+              .eq("job_order_no", updatedJobOrderNo)
+              .single();
+
+            if (error) throw error;
+            if (!data) return;
+
+            upsertNotification(
+              buildQuotationConfirmedNotification(
+                data as Pick<JobNotificationRow, "job_order_no" | "customers">,
+              ),
+            );
+            playNotificationTing();
+          } catch (error) {
+            console.error("Error handling quotation confirmation:", error);
           }
         },
       )
