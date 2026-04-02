@@ -4,6 +4,7 @@ import {
   LogOut,
   Loader2,
   Bell,
+  House,
   Clock,
   Activity,
   Search,
@@ -18,6 +19,8 @@ import {
   Download,
   ScrollText,
   ArrowRight,
+  Menu,
+  X,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import technician from "../assets/technician.png";
@@ -173,6 +176,7 @@ export default function CustomerDashboard() {
   >("all");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [showMobileMePanel, setShowMobileMePanel] = useState(false);
 
   const playNotificationSound = useCallback(() => {
     try {
@@ -481,6 +485,7 @@ export default function CustomerDashboard() {
 
   const hasQuotationProcess = quotationTickets.length > 0;
   const hasInvoiceProcess = generatedInvoices.length > 0;
+  const unreadNotificationCount = notifications.length;
 
   useEffect(() => {
     if (activeTab === "quotations" && !hasQuotationProcess) {
@@ -533,8 +538,8 @@ export default function CustomerDashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-end">
-            <div className="relative">
+          <div className="ml-auto flex items-center gap-2 sm:gap-4 w-auto justify-end">
+            <div className="relative md:hidden">
               <button
                 onClick={() => {
                   setShowNotifications((s) => !s);
@@ -543,9 +548,11 @@ export default function CustomerDashboard() {
                 className={`p-2 text-stone-600 hover:bg-stone-100 rounded-full relative transition-colors ${newNotificationPulse ? "animate-pulse" : ""}`}
               >
                 <Bell className="w-5 h-5" />
-                {notifications.length > 0 && (
+                {unreadNotificationCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white bg-red-500 rounded-full border-2 border-white">
-                    {notifications.length > 99 ? "99+" : notifications.length}
+                    {unreadNotificationCount > 99
+                      ? "99+"
+                      : unreadNotificationCount}
                   </span>
                 )}
               </button>
@@ -597,7 +604,80 @@ export default function CustomerDashboard() {
               )}
             </div>
 
-            <div className="flex items-center gap-3 pl-3 sm:pl-4 border-l border-stone-200">
+            <div className="relative hidden md:block">
+              <button
+                onClick={() => {
+                  setShowNotifications((s) => !s);
+                  setNewNotificationPulse(false);
+                }}
+                className={`p-2 text-stone-600 hover:bg-stone-100 rounded-full relative transition-colors ${newNotificationPulse ? "animate-pulse" : ""}`}
+              >
+                <Bell className="w-5 h-5" />
+                {unreadNotificationCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white bg-red-500 rounded-full border-2 border-white">
+                    {unreadNotificationCount > 99
+                      ? "99+"
+                      : unreadNotificationCount}
+                  </span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-[88vw] max-w-80 bg-white rounded-2xl shadow-xl border border-stone-200 p-4 z-50">
+                  <h4 className="text-sm font-bold text-stone-900 mb-3">
+                    Recent Updates
+                  </h4>
+                  {notifications.length === 0 ? (
+                    <p className="text-xs text-stone-500">
+                      No new notifications.
+                    </p>
+                  ) : (
+                    <ul className="space-y-2 max-h-48 overflow-y-auto">
+                      {notifications.map((note, i) => (
+                        <li
+                          key={i}
+                          onClick={() => {
+                            const match = note.match(/#(\d+)/);
+                            if (match) {
+                              const jobNo = match[1];
+                              const found = tickets.find(
+                                (t) =>
+                                  String(t.job_order_no) === jobNo ||
+                                  String(t.id) === jobNo,
+                              );
+                              if (found) openProgressView(found);
+                            }
+                            setNotifications((prev) =>
+                              prev.filter((_, idx) => idx !== i),
+                            );
+                            setShowNotifications(false);
+                          }}
+                          className="cursor-pointer text-xs font-medium text-blue-700 bg-blue-50 p-2 rounded-lg border border-blue-100 hover:bg-blue-100"
+                        >
+                          {note}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <button
+                    onClick={() => setNotifications([])}
+                    className="mt-3 w-full text-xs font-bold text-stone-400 hover:text-stone-700 text-center"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
+
+            <div className="hidden md:flex items-center gap-3 pl-3 sm:pl-4 border-l border-stone-200">
               <div
                 className="relative group cursor-pointer"
                 onClick={() => fileInputRef.current?.click()}
@@ -622,14 +702,6 @@ export default function CustomerDashboard() {
                   <Camera className="w-3 h-3 text-stone-600" />
                 </div>
               </div>
-
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarUpload}
-              />
 
               <div className="hidden md:block">
                 <p className="text-sm font-bold text-stone-900 leading-none">
@@ -656,7 +728,7 @@ export default function CustomerDashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8 print:hidden">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 pb-24 sm:py-8 sm:pb-8 space-y-6 sm:space-y-8 print:hidden">
         <section className="bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 rounded-3xl p-5 sm:p-7 text-white shadow-lg">
           <div className="flex flex-col lg:flex-row gap-6 lg:items-end lg:justify-between">
             <div>
@@ -1160,6 +1232,143 @@ export default function CustomerDashboard() {
           </div>
         )}
       </main>
+
+      {showMobileMePanel && (
+        <div className="fixed inset-0 z-[55] md:hidden print:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-stone-900/45"
+            onClick={() => setShowMobileMePanel(false)}
+            aria-label="Close Me panel"
+          />
+
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl border border-stone-200 bg-white p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-stone-400">
+                  Me
+                </p>
+                <h3 className="text-xl font-black text-stone-900 mt-1">
+                  {customerProfile.full_name || "My Profile"}
+                </h3>
+                <p className="text-sm text-stone-500 font-medium mt-0.5">
+                  {customerProfile.email || "Customer account"}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowMobileMePanel(false)}
+                className="rounded-full p-2 text-stone-500 hover:bg-stone-100"
+                aria-label="Close profile menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mt-5 flex items-center gap-3 rounded-2xl border border-stone-200 bg-stone-50 p-3">
+              <button
+                type="button"
+                className="relative group"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {isUploadingAvatar ? (
+                  <div className="w-12 h-12 rounded-full bg-white border border-stone-200 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 text-amber-600 animate-spin" />
+                  </div>
+                ) : customerProfile.avatar_url ? (
+                  <img
+                    src={customerProfile.avatar_url}
+                    alt="Profile"
+                    className="w-12 h-12 rounded-full object-cover border border-stone-200"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-black">
+                    {customerProfile.full_name?.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="absolute -bottom-1 -right-1 rounded-full bg-white border border-stone-200 p-1">
+                  <Camera className="w-3 h-3 text-stone-600" />
+                </span>
+              </button>
+
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-stone-900 truncate">
+                  {customerProfile.full_name}
+                </p>
+                <p className="text-xs text-stone-500 font-medium">
+                  Tap image to update profile photo
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={isSigningOut}
+              className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-rose-600 text-white font-bold text-sm hover:bg-rose-700 disabled:opacity-70"
+            >
+              {isSigningOut ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <LogOut className="w-4 h-4" />
+              )}
+              {isSigningOut ? "Signing out..." : "Sign Out"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!selectedQuotation && !selectedInvoice && (
+        <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-stone-200 bg-white/95 backdrop-blur md:hidden print:hidden">
+          <div className="grid grid-cols-5 gap-1 px-2 py-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("tickets")}
+              className={`flex flex-col items-center justify-center rounded-xl py-1.5 text-[11px] font-semibold transition-colors ${activeTab === "tickets" ? "text-blue-600 bg-blue-50" : "text-stone-500"}`}
+            >
+              <House className="w-5 h-5" />
+              Dashboard
+            </button>
+
+            <button
+              type="button"
+              onClick={() => hasQuotationProcess && setActiveTab("quotations")}
+              className={`flex flex-col items-center justify-center rounded-xl py-1.5 text-[11px] font-semibold transition-colors ${activeTab === "quotations" ? "text-blue-600 bg-blue-50" : "text-stone-500"} ${!hasQuotationProcess ? "opacity-50" : ""}`}
+            >
+              <ScrollText className="w-5 h-5" />
+              Quotes
+            </button>
+
+            <button
+              type="button"
+              onClick={() => hasInvoiceProcess && setActiveTab("invoices")}
+              className={`flex flex-col items-center justify-center rounded-xl py-1.5 text-[11px] font-semibold transition-colors ${activeTab === "invoices" ? "text-emerald-600 bg-emerald-50" : "text-stone-500"} ${!hasInvoiceProcess ? "opacity-50" : ""}`}
+            >
+              <FileSpreadsheet className="w-5 h-5" />
+              Billing
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("progress")}
+              className={`flex flex-col items-center justify-center rounded-xl py-1.5 text-[11px] font-semibold transition-colors ${activeTab === "progress" ? "text-indigo-600 bg-indigo-50" : "text-stone-500"}`}
+            >
+              <Activity className="w-5 h-5" />
+              Progress
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowMobileMePanel(true)}
+              className={`flex flex-col items-center justify-center rounded-xl py-1.5 text-[11px] font-semibold transition-colors ${showMobileMePanel ? "text-stone-900 bg-stone-100" : "text-stone-500"}`}
+            >
+              <Menu className="w-5 h-5" />
+              Me
+            </button>
+          </div>
+        </nav>
+      )}
 
       {/* DETAILED QUOTATION (PDF STYLE) MODAL */}
       {selectedQuotation && (

@@ -50,6 +50,9 @@ export default function SettingsContent() {
     useState(false);
   const [showSecuritySuccessDialog, setShowSecuritySuccessDialog] =
     useState(false);
+  const [showForceLogoutDialog, setShowForceLogoutDialog] = useState(false);
+  const [showForceLogoutSuccessDialog, setShowForceLogoutSuccessDialog] =
+    useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "account" | "notifications" | "security" | "system"
@@ -494,7 +497,7 @@ export default function SettingsContent() {
         details: "Sent force logout signal for all active sessions.",
       });
 
-      setShowSecuritySuccessDialog(true);
+      setShowForceLogoutSuccessDialog(true);
     } catch (error: unknown) {
       console.error("Error forcing logout signal:", error);
       setErrorMessage(
@@ -1046,7 +1049,7 @@ export default function SettingsContent() {
                     </div>
                     <button
                       type="button"
-                      onClick={handleForceLogoutAllSessions}
+                      onClick={() => setShowForceLogoutDialog(true)}
                       disabled={isLoading}
                       className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-60"
                     >
@@ -1315,6 +1318,58 @@ export default function SettingsContent() {
         title="Security Settings Updated"
         message="Security controls were saved successfully."
         onClose={() => setShowSecuritySuccessDialog(false)}
+      />
+
+      {showForceLogoutDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-red-100 bg-white p-6 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-600">
+                <LogOut className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900">
+                  Confirm Force Logout
+                </h3>
+                <p className="mt-2 text-sm font-medium text-slate-600">
+                  This will sign out all active sessions immediately. Continue?
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowForceLogoutDialog(false)}
+                disabled={isLoading}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await handleForceLogoutAllSessions();
+                  setShowForceLogoutDialog(false);
+                }}
+                disabled={isLoading}
+                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : null}
+                Confirm Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <SettingsSuccessDialog
+        open={showForceLogoutSuccessDialog}
+        title="Force Logout Triggered"
+        message="All active sessions received a force logout signal."
+        onClose={() => setShowForceLogoutSuccessDialog(false)}
       />
     </div>
   );
