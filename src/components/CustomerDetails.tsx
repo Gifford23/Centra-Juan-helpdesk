@@ -30,6 +30,7 @@ interface CustomerDetailsRow {
   phone_number: string;
   email?: string | null;
   address: string;
+  avatar_url?: string | null;
   created_at: string;
   job_orders?: JobHistoryRow[];
 }
@@ -204,9 +205,17 @@ export default function CustomerDetails() {
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-[0_12px_28px_rgba(15,23,42,0.06)] p-5 sm:p-7 flex flex-col lg:flex-row gap-6 sm:gap-8 items-start relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-50 to-transparent rounded-full -mr-20 -mt-20 opacity-70 z-0 pointer-events-none"></div>
 
-        <div className="relative z-10 w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-tr from-blue-600 to-blue-400 text-white rounded-2xl flex items-center justify-center font-black text-3xl sm:text-4xl shadow-lg shadow-blue-500/20 flex-shrink-0">
-          {customer.full_name.charAt(0).toUpperCase()}
-        </div>
+        {customer.avatar_url ? (
+          <img
+            src={customer.avatar_url}
+            alt={customer.full_name}
+            className="relative z-10 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border border-slate-200 shadow-lg shadow-blue-500/20 flex-shrink-0"
+          />
+        ) : (
+          <div className="relative z-10 w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-tr from-blue-600 to-blue-400 text-white rounded-2xl flex items-center justify-center font-black text-3xl sm:text-4xl shadow-lg shadow-blue-500/20 flex-shrink-0">
+            {customer.full_name.charAt(0).toUpperCase()}
+          </div>
+        )}
 
         <div className="relative z-10 flex-1 w-full grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div>

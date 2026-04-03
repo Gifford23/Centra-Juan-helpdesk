@@ -27,6 +27,7 @@ interface CustomerRow {
   phone_number: string;
   email: string | null;
   address: string;
+  avatar_url: string | null;
   job_orders: JobOrderLite[] | null;
 }
 
@@ -37,6 +38,7 @@ interface CustomerViewModel {
   phone: string;
   email: string;
   address: string;
+  avatarUrl: string | null;
   repairs: number;
   lastVisit: string;
   lastVisitDateValue: string | null;
@@ -74,6 +76,7 @@ export default function CustomersContent() {
           phone_number,
           email,
           address,
+          avatar_url,
           job_orders (
             created_at
           )
@@ -113,6 +116,7 @@ export default function CustomersContent() {
             phone: c.phone_number,
             email: c.email || "No Email Provided",
             address: c.address,
+            avatarUrl: c.avatar_url,
             repairs: repairsCount,
             lastVisit: lastVisitDate,
             lastVisitDateValue,
@@ -311,13 +315,27 @@ export default function CustomersContent() {
                   className="rounded-2xl border border-slate-200/75 bg-white p-4 shadow-[0_10px_22px_rgba(15,23,42,0.05)]"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-bold text-gray-900 truncate">
-                        {customer.name}
-                      </p>
-                      <p className="text-xs text-gray-500 font-medium mt-0.5">
-                        ID: {customer.shortId}
-                      </p>
+                    <div className="flex items-start gap-3 min-w-0">
+                      {customer.avatarUrl ? (
+                        <img
+                          src={customer.avatarUrl}
+                          alt={customer.name}
+                          className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm border border-blue-200 shadow-sm flex-shrink-0">
+                          {customer.name?.charAt(0).toUpperCase() || "C"}
+                        </div>
+                      )}
+
+                      <div className="min-w-0">
+                        <p className="font-bold text-gray-900 truncate">
+                          {customer.name}
+                        </p>
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">
+                          ID: {customer.shortId}
+                        </p>
+                      </div>
                     </div>
                     <span className="inline-flex items-center justify-center min-w-8 h-8 px-2 rounded-full bg-blue-50 border border-blue-100 text-blue-700 font-bold text-sm">
                       {customer.repairs}
@@ -383,12 +401,28 @@ export default function CustomersContent() {
                       className="hover:bg-blue-50/35 transition-colors group"
                     >
                       <td className="px-4 sm:px-7 py-5">
-                        <p className="font-bold text-gray-900">
-                          {customer.name}
-                        </p>
-                        <p className="text-xs text-gray-500 font-medium mt-0.5">
-                          ID: {customer.shortId}
-                        </p>
+                        <div className="flex items-center gap-3 min-w-0">
+                          {customer.avatarUrl ? (
+                            <img
+                              src={customer.avatarUrl}
+                              alt={customer.name}
+                              className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm border border-blue-200 shadow-sm flex-shrink-0">
+                              {customer.name?.charAt(0).toUpperCase() || "C"}
+                            </div>
+                          )}
+
+                          <div className="min-w-0">
+                            <p className="font-bold text-gray-900 truncate">
+                              {customer.name}
+                            </p>
+                            <p className="text-xs text-gray-500 font-medium mt-0.5">
+                              ID: {customer.shortId}
+                            </p>
+                          </div>
+                        </div>
                       </td>
 
                       <td className="px-4 sm:px-7 py-5">
