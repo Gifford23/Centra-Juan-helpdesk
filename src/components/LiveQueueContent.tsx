@@ -1,17 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom"; // <-- IMPORT ADDED
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   Filter,
   Printer,
-  Download,
   ChevronDown,
   Loader2,
   Trash2,
   Edit,
   AlertTriangle,
   X,
-  Eye, // <-- IMPORT ADDED
+  Eye,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { printJobOrder } from "../utils/printJobOrder";
@@ -48,7 +47,7 @@ export default function LiveQueueContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [technicians, setTechnicians] = useState<string[]>([]);
 
-  const navigate = useNavigate(); // <-- ROUTER HOOK ADDED
+  const navigate = useNavigate();
 
   // Search and Filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -73,7 +72,6 @@ export default function LiveQueueContent() {
   const savedUserFullName = savedUser?.full_name;
   const isSuperAdmin = savedUser?.role === "Super Admin";
 
-  // Fetch Technicians for the Edit Modal dropdown
   const fetchTechnicians = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -156,9 +154,6 @@ export default function LiveQueueContent() {
     if (isSuperAdmin) fetchTechnicians();
   }, [fetchJobOrders, fetchTechnicians, isSuperAdmin]);
 
-  // ==========================================
-  // ACTION HANDLERS: DELETE & UPDATE
-  // ==========================================
   const handleDeleteConfirm = async () => {
     if (!jobToDelete) return;
     setIsDeleting(true);
@@ -177,7 +172,7 @@ export default function LiveQueueContent() {
       });
 
       setJobToDelete(null);
-      fetchJobOrders(); // Refresh table
+      fetchJobOrders();
     } catch (error) {
       console.error("Error deleting job order:", error);
       alert("Failed to delete the job order.");
@@ -202,7 +197,6 @@ export default function LiveQueueContent() {
         assigned_tech?: string;
       } = { status, priority };
 
-      // Only Super Admins can reassign tickets from this view
       if (isSuperAdmin) {
         updateData.assigned_tech = String(
           formData.get("assigned_tech") || "Unassigned",
@@ -223,7 +217,7 @@ export default function LiveQueueContent() {
       });
 
       setJobToEdit(null);
-      fetchJobOrders(); // Refresh table
+      fetchJobOrders();
     } catch (error) {
       console.error("Error updating job order:", error);
       alert("Failed to update the job order.");
@@ -238,7 +232,6 @@ export default function LiveQueueContent() {
     setJobToPrint(null);
   };
 
-  // Status Badge Styling
   const getStatusStyle = (status: string) => {
     switch (status) {
       case "Pending Drop-off":
@@ -288,7 +281,6 @@ export default function LiveQueueContent() {
     return diffMs <= 60 * 60 * 1000;
   };
 
-  // Filter Logic
   const filteredQueue = queueData.filter((job) => {
     const matchesSearch =
       job.id.includes(searchTerm) ||
@@ -316,43 +308,165 @@ export default function LiveQueueContent() {
   ).length;
 
   // ==========================================
-  // EXPORT TO CSV LOGIC
+  // ELEGANT HTML PRINT LIST LOGIC
   // ==========================================
-  const handleExportCSV = () => {
-    const headers = [
-      "Job Order ID",
-      "Date Logged",
-      "Customer Name",
-      "Device",
-      "Assigned Technician",
-      "Status",
-      "Priority",
-    ];
+  const handlePrintList = () => {
+    const getStatusClass = (status: string) => {
+      if (["Ready", "Ready for Pickup", "Released"].includes(status)) return "status-completed";
+      if (["Diagnosing", "In Progress"].includes(status)) return "status-progress";
+      return "status-pending"; 
+    };
 
-    const csvRows = filteredQueue.map((job) => {
-      return [
-        `"${job.id}"`,
-        `"${job.date}"`,
-        `"${job.customer}"`,
-        `"${job.device}"`,
-        `"${job.tech}"`,
-        `"${job.status}"`,
-        `"${job.priority}"`,
-      ].join(",");
-    });
+    const rowsHtml = filteredQueue.map(job => `
+      <tr>
+        <td>#${job.id}</td>
+        <td>${job.customer}</td>
+        <td>${job.device}</td>
+        <td>${job.tech}</td>
+        <td>
+          <span class="status-badge ${getStatusClass(job.status)}">${job.status}</span>
+        </td>
+        <td>${job.date}</td>
+      </tr>
+    `).join('');
 
-    const csvContent = [headers.join(","), ...csvRows].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
+    const htmlContent = `
+      <!doctype html>
+      <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>Customer Job Order List</title>
+          <style>
+            body {
+              font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+              background-color: #f4f8fc;
+              padding: 20px;
+              color: #2c3e50;
+            }
+            .header-area {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-end;
+              max-width: 1000px;
+              margin: 0 auto 20px auto;
+            }
+            .header-area h2 {
+              margin: 0;
+              color: #1e3a8a;
+              font-size: 24px;
+            }
+            .header-area p {
+              margin: 0;
+              font-size: 14px;
+              color: #64748b;
+              font-weight: 600;
+            }
+            .table-container {
+              background-color: #ffffff;
+              border-radius: 8px;
+              box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+              overflow: hidden;
+              max-width: 1000px;
+              margin: auto;
+            }
+            .elegant-table {
+              border-collapse: collapse;
+              width: 100%;
+              font-size: 14px;
+            }
+            .elegant-table th, .elegant-table td {
+              padding: 14px 20px;
+              text-align: left;
+              border-bottom: 1px solid #e1e8f0;
+            }
+            .elegant-table th {
+              background-color: #2563eb;
+              color: #ffffff;
+              font-weight: 600;
+              letter-spacing: 0.5px;
+              text-transform: uppercase;
+              font-size: 12px;
+              white-space: nowrap;
+            }
+            .elegant-table tr:nth-child(even) {
+              background-color: #f9fbff;
+            }
+            .elegant-table tr:last-child td {
+              border-bottom: none;
+            }
+            .status-badge {
+              display: inline-block;
+              padding: 4px 10px;
+              border-radius: 12px;
+              font-size: 12px;
+              font-weight: 600;
+              text-align: center;
+            }
+            .status-completed {
+              background-color: #d1fae5;
+              color: #065f46;
+            }
+            .status-progress {
+              background-color: #dbeafe;
+              color: #1e40af;
+            }
+            .status-pending {
+              background-color: #ffedd5;
+              color: #9a3412;
+            }
+            @media print {
+              body {
+                background-color: white;
+                padding: 0;
+              }
+              .table-container {
+                box-shadow: none;
+                max-width: 100%;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header-area">
+            <h2>Live Queue Report</h2>
+            <p>Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</p>
+          </div>
+          <div class="table-container">
+            <table class="elegant-table">
+              <thead>
+                <tr>
+                  <th>Job Order #</th>
+                  <th>Customer Name</th>
+                  <th>Device</th>
+                  <th>Technician</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml || '<tr><td colspan="6" style="text-align:center;">No records found.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+          <script>
+            window.onload = () => {
+              setTimeout(() => {
+                window.print();
+              }, 300);
+            }
+          </script>
+        </body>
+      </html>
+    `;
 
-    const dateStr = new Date().toISOString().split("T")[0];
-    link.setAttribute("download", `CentralJuan_LiveQueue_${dateStr}.csv`);
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+    } else {
+      alert("Please allow popups to print the list.");
+    }
   };
 
   return (
@@ -383,11 +497,11 @@ export default function LiveQueueContent() {
           </div>
 
           <button
-            onClick={handleExportCSV}
+            onClick={handlePrintList}
             disabled={filteredQueue.length === 0}
             className="w-full lg:w-auto flex items-center justify-center gap-2 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 px-5 py-3 rounded-xl font-black transition-all shadow-sm text-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Download className="w-4 h-4" /> Export CSV
+            <Printer className="w-4 h-4" /> Print / Export List
           </button>
         </div>
 
