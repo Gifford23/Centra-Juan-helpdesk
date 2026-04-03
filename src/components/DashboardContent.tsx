@@ -111,6 +111,11 @@ export default function DashboardContent() {
         ? "Good afternoon"
         : "Good evening";
   const firstName = savedUser?.full_name?.split(" ")?.[0] || "";
+  const greetingName = firstName || "Team";
+  const greetingPrefix = `${greeting}, `;
+  const fullGreeting = `${greetingPrefix}${greetingName}`;
+  const [typedGreetingLength, setTypedGreetingLength] = useState(0);
+  const isGreetingTyping = typedGreetingLength < fullGreeting.length;
   const assignedTechnicianName = savedUser?.full_name || "";
   const todayLabel = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -121,6 +126,22 @@ export default function DashboardContent() {
 
   const greetingIcon =
     currentHour < 12 ? morningGif : currentHour < 18 ? noonGif : eveningGif;
+
+  useEffect(() => {
+    setTypedGreetingLength(0);
+
+    const timer = window.setInterval(() => {
+      setTypedGreetingLength((prev) => {
+        if (prev >= fullGreeting.length) {
+          window.clearInterval(timer);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 80);
+
+    return () => window.clearInterval(timer);
+  }, [fullGreeting]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 640);
@@ -431,8 +452,21 @@ export default function DashboardContent() {
 
             <div className="min-w-0">
               <h1 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight truncate">
-                {greeting},{" "}
-                <span className="text-blue-600">{firstName || "Team"}</span>
+                {greetingPrefix.slice(
+                  0,
+                  Math.min(typedGreetingLength, greetingPrefix.length),
+                )}
+                <span className="text-blue-600">
+                  {typedGreetingLength > greetingPrefix.length
+                    ? greetingName.slice(
+                        0,
+                        typedGreetingLength - greetingPrefix.length,
+                      )
+                    : ""}
+                </span>
+                {isGreetingTyping ? (
+                  <span className="ml-0.5 text-blue-500 animate-pulse">|</span>
+                ) : null}
                 <img
                   src={greetingIcon}
                   alt={`${greeting} icon`}

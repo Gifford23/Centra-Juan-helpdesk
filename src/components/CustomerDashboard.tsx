@@ -50,6 +50,7 @@ type QuoteItem = {
 
 type Ticket = {
   id: string | number;
+  tracking_id?: string;
   status: string;
   brand?: string;
   model?: string;
@@ -163,10 +164,19 @@ const isCompletedTicket = (status: string) =>
   COMPLETED_STATUSES.includes(status);
 
 const formatTrackingId = (ticket: Ticket) => {
+  const savedTrackingId = String(ticket.tracking_id || "")
+    .trim()
+    .toUpperCase();
+  if (savedTrackingId) return savedTrackingId;
+
   const rawId = String(ticket.job_order_no ?? ticket.id ?? "")
     .replace(/[^a-zA-Z0-9]/g, "")
     .toUpperCase();
-  return `CJ-${rawId || "UNKNOWN"}`;
+
+  if (!rawId) return "CJ-UNKNOWN";
+  if (/^\d+$/.test(rawId)) return `CJ-${rawId.padStart(8, "0")}`;
+
+  return `CJ-${rawId}`;
 };
 
 export default function CustomerDashboard() {
@@ -754,49 +764,70 @@ export default function CustomerDashboard() {
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-[88vw] max-w-80 bg-white rounded-2xl shadow-xl border border-stone-200 p-4 z-50">
-                  <h4 className="text-sm font-bold text-stone-900 mb-3">
-                    Recent Updates
-                  </h4>
-                  {notifications.length === 0 ? (
-                    <p className="text-xs text-stone-500">
-                      No new notifications.
-                    </p>
-                  ) : (
-                    <ul className="space-y-2 max-h-48 overflow-y-auto">
-                      {notifications.map((note, i) => (
-                        <li
-                          key={i}
-                          onClick={() => {
-                            const match = note.match(/#(\d+)/);
-                            if (match) {
-                              const jobNo = match[1];
-                              const found = tickets.find(
-                                (t) =>
-                                  String(t.job_order_no) === jobNo ||
-                                  String(t.id) === jobNo,
-                              );
-                              if (found) openProgressView(found);
-                            }
-                            setNotifications((prev) =>
-                              prev.filter((_, idx) => idx !== i),
-                            );
-                            setShowNotifications(false);
-                          }}
-                          className="cursor-pointer text-xs font-medium text-blue-700 bg-blue-50 p-2 rounded-lg border border-blue-100 hover:bg-blue-100"
-                        >
-                          {note}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                <>
                   <button
-                    onClick={() => setNotifications([])}
-                    className="mt-3 w-full text-xs font-bold text-stone-400 hover:text-stone-700 text-center"
-                  >
-                    Clear All
-                  </button>
-                </div>
+                    type="button"
+                    onClick={() => setShowNotifications(false)}
+                    className="fixed inset-0 z-40 bg-stone-900/35 md:hidden"
+                    aria-label="Close notifications"
+                  />
+
+                  <div className="fixed left-3 right-3 top-20 z-50 rounded-2xl border border-stone-200 bg-white p-4 shadow-2xl md:hidden">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h4 className="text-sm font-bold text-stone-900">
+                        Recent Updates
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setShowNotifications(false)}
+                        className="rounded-full p-1.5 text-stone-500 hover:bg-stone-100"
+                        aria-label="Close notifications"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    {notifications.length === 0 ? (
+                      <p className="text-xs text-stone-500">
+                        No new notifications.
+                      </p>
+                    ) : (
+                      <ul className="space-y-2 max-h-[52vh] overflow-y-auto pr-1">
+                        {notifications.map((note, i) => (
+                          <li
+                            key={i}
+                            onClick={() => {
+                              const match = note.match(/#(\d+)/);
+                              if (match) {
+                                const jobNo = match[1];
+                                const found = tickets.find(
+                                  (t) =>
+                                    String(t.job_order_no) === jobNo ||
+                                    String(t.id) === jobNo,
+                                );
+                                if (found) openProgressView(found);
+                              }
+                              setNotifications((prev) =>
+                                prev.filter((_, idx) => idx !== i),
+                              );
+                              setShowNotifications(false);
+                            }}
+                            className="cursor-pointer rounded-lg border border-blue-100 bg-blue-50 p-2.5 text-[11px] font-medium text-blue-700 hover:bg-blue-100"
+                          >
+                            {note}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    <button
+                      onClick={() => setNotifications([])}
+                      className="mt-3 w-full text-xs font-bold text-stone-400 hover:text-stone-700 text-center"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                </>
               )}
             </div>
 
@@ -899,7 +930,7 @@ export default function CustomerDashboard() {
                     }}
                     className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-stone-700 hover:bg-stone-100 transition-colors"
                   >
-                    <UserRound className="w-4 h-4 text-amber-600" />
+                    <UserRound className="w-4 h-4 text-blue-600" />
                     Edit Profile
                   </button>
 
@@ -911,7 +942,7 @@ export default function CustomerDashboard() {
                     }}
                     className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-stone-700 hover:bg-stone-100 transition-colors"
                   >
-                    <Activity className="w-4 h-4 text-indigo-600" />
+                    <Activity className="w-4 h-4 text-emerald-600" />
                     Track Status
                   </button>
 
@@ -952,21 +983,28 @@ export default function CustomerDashboard() {
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 pb-24 sm:py-8 sm:pb-8 space-y-6 sm:space-y-8 print:hidden">
         <section className="bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 rounded-3xl p-5 sm:p-7 text-white shadow-lg">
           <div className="flex flex-col lg:flex-row gap-6 lg:items-end lg:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-00/80 mb-2">
-                Welcome back
-              </p>
+            <div className="min-w-0">
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-00/80">
+                  Welcome back
+                </p>
+                {progressTicket ? (
+                  <div className="text-[9px] font-semibold text-white/90 text-right leading-tight sm:hidden">
+                    Tracking ID: {formatTrackingId(progressTicket)}
+                  </div>
+                ) : null}
+              </div>
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
                 {customerProfile.full_name || "Valued Customer"}
               </h1>
-              <p className="mt-2 text-sm text-gray-100 max-w-xl">
+              <p className="mt-2 text-xs sm:text-sm text-gray-100 max-w-xl">
                 Customer Dashboard Monitoring Status
               </p>
             </div>
 
-            <div className="flex flex-col items-start sm:items-end gap-2">
+            <div className="flex flex-col items-start sm:items-end gap-2 lg:self-stretch lg:justify-between">
               {progressTicket ? (
-                <div className="text-sm font-semibold text-white/90">
+                <div className="hidden sm:block text-sm font-semibold text-white/90">
                   Tracking ID: {formatTrackingId(progressTicket)}
                 </div>
               ) : null}
@@ -1410,8 +1448,8 @@ export default function CustomerDashboard() {
                   <p className="text-[11px] uppercase tracking-[0.2em] font-bold text-white/80">
                     Live Progress Monitor
                   </p>
-                  <div className="mt-2 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
-                    <div>
+                  <div className="mt-2 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
                       <h3 className="text-2xl sm:text-3xl font-black tracking-tight">
                         Ticket #{progressTicket.job_order_no}
                       </h3>
@@ -1421,24 +1459,25 @@ export default function CustomerDashboard() {
                     </div>
                     <button
                       onClick={() => setActiveTab("tickets")}
-                      className="inline-flex items-center gap-2 self-start md:self-auto px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-sm font-bold transition-colors"
+                      className="inline-flex shrink-0 items-center gap-1.5 self-start px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-xs sm:text-sm font-bold transition-colors"
                     >
-                      Change Ticket <ArrowRight className="w-4 h-4" />
+                      Change Ticket{" "}
+                      <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
                   </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                     <span
-                      className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${isCompletedTicket(progressTicket.status) ? "border-emerald-200/60 bg-emerald-500/20 text-emerald-100" : "border-blue-200/60 bg-blue-500/20 text-blue-100"}`}
+                      className={`inline-flex w-full sm:w-auto items-center justify-center rounded-full border px-2 py-1 text-[9px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis ${isCompletedTicket(progressTicket.status) ? "border-emerald-200/60 bg-emerald-500/20 text-emerald-100" : "border-blue-200/60 bg-blue-500/20 text-blue-100"}`}
                     >
                       Status: {progressTicket.status || "Pending"}
                     </span>
-                    <span className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white/95">
+                    <span className="inline-flex w-full sm:w-auto items-center justify-center rounded-full border border-white/25 bg-white/10 px-2 py-1 text-[9px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis text-white/95">
                       Tech: {progressTicket.assigned_tech || "Unassigned"}
                     </span>
-                    <span className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white/95">
+                    <span className="inline-flex w-full sm:w-auto items-center justify-center rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-white/95">
                       Quote: {progressTicket.quotation_status || "Not Created"}
                     </span>
-                    <span className="inline-flex items-center rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white/95">
+                    <span className="inline-flex w-full sm:w-auto items-center justify-center rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-white/95">
                       Payment: {progressTicket.payment_status || "Unpaid"}
                     </span>
                   </div>
@@ -1563,7 +1602,7 @@ export default function CustomerDashboard() {
                   }}
                   className="w-full flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold text-stone-700 hover:bg-stone-100"
                 >
-                  <UserRound className="w-4 h-4 text-amber-600" />
+                  <UserRound className="w-4 h-4 text-blue-600" />
                   Edit Profile
                 </button>
 
@@ -1575,7 +1614,7 @@ export default function CustomerDashboard() {
                   }}
                   className="w-full flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-semibold text-stone-700 hover:bg-stone-100"
                 >
-                  <Activity className="w-4 h-4 text-indigo-600" />
+                  <Activity className="w-4 h-4 text-emerald-600" />
                   Track Status
                 </button>
 
