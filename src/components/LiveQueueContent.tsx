@@ -312,12 +312,16 @@ export default function LiveQueueContent() {
   // ==========================================
   const handlePrintList = () => {
     const getStatusClass = (status: string) => {
-      if (["Ready", "Ready for Pickup", "Released"].includes(status)) return "status-completed";
-      if (["Diagnosing", "In Progress"].includes(status)) return "status-progress";
-      return "status-pending"; 
+      if (["Ready", "Ready for Pickup", "Released"].includes(status))
+        return "status-completed";
+      if (["Diagnosing", "In Progress"].includes(status))
+        return "status-progress";
+      return "status-pending";
     };
 
-    const rowsHtml = filteredQueue.map(job => `
+    const rowsHtml = filteredQueue
+      .map(
+        (job) => `
       <tr>
         <td>#${job.id}</td>
         <td>${job.customer}</td>
@@ -326,9 +330,11 @@ export default function LiveQueueContent() {
         <td>
           <span class="status-badge ${getStatusClass(job.status)}">${job.status}</span>
         </td>
-        <td>${job.date}</td>
+        <td class="column-date">${job.date}</td>
       </tr>
-    `).join('');
+    `,
+      )
+      .join("");
 
     const htmlContent = `
       <!doctype html>
@@ -395,6 +401,9 @@ export default function LiveQueueContent() {
             .elegant-table tr:last-child td {
               border-bottom: none;
             }
+            .elegant-table .column-date {
+              white-space: nowrap;
+            }
             .status-badge {
               display: inline-block;
               padding: 4px 10px;
@@ -424,6 +433,9 @@ export default function LiveQueueContent() {
                 box-shadow: none;
                 max-width: 100%;
               }
+              .elegant-table .column-date {
+                white-space: nowrap;
+              }
             }
           </style>
         </head>
@@ -441,7 +453,7 @@ export default function LiveQueueContent() {
                   <th>Device</th>
                   <th>Technician</th>
                   <th>Status</th>
-                  <th>Date</th>
+                  <th class="column-date">Date</th>
                 </tr>
               </thead>
               <tbody>
