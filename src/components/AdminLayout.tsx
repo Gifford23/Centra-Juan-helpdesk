@@ -481,22 +481,22 @@ export default function AdminLayout({
           </Link>
 
           <Link
-            to="/job-orders"
-            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/job-orders" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
-          >
-            <ClipboardList className="w-5 h-5 flex-shrink-0" />
-            <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              Job Orders
-            </span>
-          </Link>
-
-          <Link
             to="/queue"
             className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/queue" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
           >
             <Tickets className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Tickets
+            </span>
+          </Link>
+
+          <Link
+            to="/job-orders"
+            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/job-orders" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
+          >
+            <ClipboardList className="w-5 h-5 flex-shrink-0" />
+            <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              Job Orders
             </span>
           </Link>
 
@@ -614,19 +614,19 @@ export default function AdminLayout({
               </Link>
 
               <Link
-                to="/job-orders"
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/job-orders" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
-              >
-                <ClipboardList className="w-5 h-5 flex-shrink-0" />
-                Job Orders
-              </Link>
-
-              <Link
                 to="/queue"
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/queue" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
               >
                 <Tickets className="w-5 h-5 flex-shrink-0" />
                 Tickets
+              </Link>
+
+              <Link
+                to="/job-orders"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/job-orders" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+              >
+                <ClipboardList className="w-5 h-5 flex-shrink-0" />
+                Job Orders
               </Link>
 
               <Link
@@ -919,19 +919,19 @@ export default function AdminLayout({
               </Link>
 
               <Link
-                to="/job-orders"
-                className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors ${location.pathname === "/job-orders" ? "text-blue-700" : "text-slate-400 hover:text-slate-600"}`}
-              >
-                <ClipboardList className="w-5 h-5" />
-                <span className="text-xs mt-1 font-medium">Orders</span>
-              </Link>
-
-              <Link
                 to="/queue"
                 className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors ${location.pathname === "/queue" ? "text-blue-700" : "text-slate-400 hover:text-slate-600"}`}
               >
                 <Tickets className="w-5 h-5" />
                 <span className="text-xs mt-1 font-medium">Tickets</span>
+              </Link>
+
+              <Link
+                to="/job-orders"
+                className={`flex flex-col items-center justify-center py-1.5 rounded-xl transition-colors ${location.pathname === "/job-orders" ? "text-blue-700" : "text-slate-400 hover:text-slate-600"}`}
+              >
+                <ClipboardList className="w-5 h-5" />
+                <span className="text-xs mt-1 font-medium">Orders</span>
               </Link>
 
               <Link
