@@ -442,9 +442,9 @@ export default function DashboardContent() {
       {/* ==========================================
           PAGE HEADER
       ========================================== */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-2 pt-1 pb-1 sm:px-0 sm:pt-0 sm:pb-0">
         <div className="min-w-0">
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-4 sm:gap-4">
             <div className="relative h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-500 text-white shadow-[0_10px_26px_rgba(59,130,246,0.36)] flex items-center justify-center flex-shrink-0">
               <LayoutGrid className="w-6 h-6" />
               <span className="absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-400" />
@@ -474,7 +474,7 @@ export default function DashboardContent() {
                 />
               </h1>
 
-              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+              <div className="mt-2 flex flex-wrap items-center gap-2.5 text-xs sm:text-sm">
                 <span className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-3 py-0.5 text-[10px] font-semibold text-blue-700">
                   General Operations Manager
                 </span>
