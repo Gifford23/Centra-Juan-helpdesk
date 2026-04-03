@@ -65,12 +65,18 @@ export default function CustomerProgressDetails({
     {
       key: "job" as const,
       label: "Job Order Details",
+      title: "Ticket logged and diagnosed",
+      description:
+        "Your repair request has been created and initial checks are in progress.",
       icon: ClipboardList,
       active: true,
     },
     {
       key: "quote" as const,
       label: "Quotation Details",
+      title: "Quotation prepared",
+      description:
+        "Parts and labor costs are being finalized for your confirmation.",
       icon: FileText,
       active:
         !!ticket.quotation_status && ticket.quotation_status !== "Not Created",
@@ -78,18 +84,27 @@ export default function CustomerProgressDetails({
     {
       key: "po" as const,
       label: "Purchase Order Details",
+      title: "Parts procurement",
+      description:
+        "Required parts are being requested and purchase details are tracked.",
       icon: ShoppingCart,
       active: !!ticket.has_purchase_order,
     },
     {
       key: "payment" as const,
       label: "Payment Details",
+      title: "Payment processing",
+      description:
+        "Payments are recorded and your remaining balance is updated live.",
       icon: CreditCard,
       active: ticket.payment_status === "Paid" || financials.paid > 0,
     },
     {
       key: "complete" as const,
       label: "Complete Details",
+      title: "Ready for release",
+      description:
+        "Repair is complete and your device is now ready for pickup.",
       icon: BadgeCheck,
       active: isCompleted,
     },
@@ -217,7 +232,7 @@ export default function CustomerProgressDetails({
           Progress Stages
         </h4>
 
-        <div className="md:hidden space-y-2.5">
+        <div className="md:hidden space-y-1.5">
           {stages.map((stage, index) => {
             const isCompletedStage = index < currentProgressIndex;
             const isCurrentStage = index === currentProgressIndex;
@@ -225,32 +240,42 @@ export default function CustomerProgressDetails({
             const StageIcon = stage.icon;
 
             return (
-              <button
-                key={stage.key}
-                onClick={() => setActiveStage(stage.key)}
-                className={`w-full rounded-2xl border px-3 py-2.5 transition-all text-left ${
-                  isCurrentStage
-                    ? "border-blue-200 bg-blue-50/70"
-                    : "border-stone-200 bg-white"
-                }`}
-              >
-                <div className="flex items-center gap-3">
+              <div key={stage.key} className="relative pl-12 pb-3 last:pb-0">
+                {index < stages.length - 1 && (
                   <span
-                    className={`inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-white shadow-sm ${
-                      isCompletedStage
-                        ? "bg-emerald-500"
-                        : isCurrentStage
-                          ? "bg-blue-600 ring-4 ring-blue-100"
-                          : "bg-stone-400"
+                    className={`absolute left-[15px] top-8 h-[calc(100%-20px)] w-0.5 rounded-full ${
+                      index < currentProgressIndex
+                        ? "bg-emerald-400"
+                        : "bg-stone-200"
                     }`}
-                  >
-                    {isCompletedStage ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      <StageIcon className="w-4 h-4" />
-                    )}
-                  </span>
+                    aria-hidden="true"
+                  />
+                )}
 
+                <span
+                  className={`absolute left-0 top-0 inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-white shadow-sm ${
+                    isCompletedStage
+                      ? "bg-emerald-500"
+                      : isCurrentStage
+                        ? "bg-blue-600 ring-4 ring-blue-100"
+                        : "bg-stone-300"
+                  }`}
+                >
+                  {isCompletedStage ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <StageIcon className="w-4 h-4" />
+                  )}
+                </span>
+
+                <button
+                  onClick={() => setActiveStage(stage.key)}
+                  className={`w-full rounded-2xl border px-3.5 py-3 transition-all text-left ${
+                    isCurrentStage
+                      ? "border-blue-200 bg-blue-50/70"
+                      : "border-stone-200 bg-white"
+                  }`}
+                >
                   <div className="min-w-0">
                     <p
                       className={`text-[10px] font-black uppercase tracking-[0.18em] ${
@@ -260,7 +285,7 @@ export default function CustomerProgressDetails({
                       Step {index + 1}
                     </p>
                     <p
-                      className={`text-sm font-black leading-tight break-words ${
+                      className={`mt-1 text-[17px] font-black leading-tight break-words ${
                         isCurrentStage
                           ? "text-stone-900"
                           : isUpcomingStage
@@ -270,9 +295,23 @@ export default function CustomerProgressDetails({
                     >
                       {stage.label}
                     </p>
+                    <p
+                      className={`mt-2 text-sm font-semibold ${
+                        isUpcomingStage ? "text-stone-500" : "text-stone-700"
+                      }`}
+                    >
+                      {stage.title}
+                    </p>
+                    <p
+                      className={`mt-1 text-sm leading-snug ${
+                        isUpcomingStage ? "text-stone-400" : "text-stone-500"
+                      }`}
+                    >
+                      {stage.description}
+                    </p>
                   </div>
-                </div>
-              </button>
+                </button>
+              </div>
             );
           })}
         </div>
