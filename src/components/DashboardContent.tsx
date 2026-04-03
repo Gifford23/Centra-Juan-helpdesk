@@ -621,9 +621,10 @@ export default function DashboardContent() {
                   }}
                 >
                   <CartesianGrid
-                    vertical={false}
+                    vertical
                     stroke="#cbd5e1"
-                    strokeWidth={1.1}
+                    strokeWidth={1}
+                    strokeDasharray="3 3"
                   />
                   <XAxis
                     dataKey="date"
