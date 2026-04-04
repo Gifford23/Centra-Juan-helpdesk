@@ -17,7 +17,7 @@ import {
   Loader2,
   Wallet,
 } from "lucide-react";
-import technician from "../assets/technician.png";
+import technician from "../assets/icons/bot2.png";
 import quotationIcon from "../assets/icons/quotation.png";
 import tingSound from "../assets/sound/ting.mp3";
 import { supabase } from "../lib/supabase";
@@ -452,27 +452,33 @@ export default function AdminLayout({
             setIsSidebarExpanded(false);
           }
         }}
-        className="fixed top-0 left-0 h-screen bg-blue-600 border-r border-blue-700 text-white z-50 
+        className="fixed top-0 left-0 h-screen bg-gradient-to-b from-blue-500 via-blue-600 to-blue-700 border-r border-blue-400/70 text-white z-50 
                       w-16 sm:w-20 md:hover:w-64 transition-all duration-300 ease-in-out group hidden md:flex
-                      overflow-hidden flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]"
+                      overflow-hidden flex-col shadow-[10px_0_34px_rgba(30,64,175,0.35)]"
       >
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-14 -left-10 h-36 w-36 rounded-full bg-cyan-200/25 blur-2xl" />
+          <div className="absolute top-1/3 -right-14 h-44 w-44 rounded-full bg-indigo-200/25 blur-3xl" />
+          <div className="absolute bottom-8 left-4 h-24 w-24 rounded-full border border-white/20" />
+        </div>
+
         {/* Logo Section */}
-        <div className="h-16 flex items-center px-4 sm:px-6 border-b border-blue-700 whitespace-nowrap">
+        <div className="relative z-10 h-16 flex items-center px-4 sm:px-6 border-b border-white/15 whitespace-nowrap bg-white/5">
           <img
             src={technician}
             alt="Technician"
-            className="w-8 h-8 flex-shrink-0 object-cover drop-shadow-sm"
+            className="w-8 h-8 flex-shrink-0 object-cover drop-shadow-[0_6px_10px_rgba(15,23,42,0.45)]"
           />
-          <span className="ml-4 font-black text-xl text-white tracking-tight opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <span className="ml-4 font-black text-xl text-white tracking-tight opacity-0 group-hover:opacity-100 transition-all duration-300 drop-shadow-[0_2px_6px_rgba(30,64,175,0.4)]">
             Help Desk
           </span>
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 py-6 flex flex-col gap-1.5 px-3 overflow-y-auto">
+        <nav className="relative z-10 flex-1 py-6 flex flex-col gap-2 px-3 overflow-y-auto">
           <Link
             to="/"
-            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
+            className={`relative flex items-center px-3 py-2.5 rounded-2xl border transition-all whitespace-nowrap font-semibold ${location.pathname === "/" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_10px_24px_rgba(15,23,42,0.25)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
           >
             <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -482,7 +488,7 @@ export default function AdminLayout({
 
           <Link
             to="/queue"
-            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/queue" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
+            className={`relative flex items-center px-3 py-2.5 rounded-2xl border transition-all whitespace-nowrap font-semibold ${location.pathname === "/queue" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_10px_24px_rgba(15,23,42,0.25)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
           >
             <Tickets className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -492,7 +498,7 @@ export default function AdminLayout({
 
           <Link
             to="/job-orders"
-            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/job-orders" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
+            className={`relative flex items-center px-3 py-2.5 rounded-2xl border transition-all whitespace-nowrap font-semibold ${location.pathname === "/job-orders" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_10px_24px_rgba(15,23,42,0.25)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
           >
             <ClipboardList className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -502,7 +508,7 @@ export default function AdminLayout({
 
           <Link
             to="/quotations"
-            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/quotations" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
+            className={`relative flex items-center px-3 py-2.5 rounded-2xl border transition-all whitespace-nowrap font-semibold ${location.pathname === "/quotations" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_10px_24px_rgba(15,23,42,0.25)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
           >
             <img
               src={quotationIcon}
@@ -516,7 +522,7 @@ export default function AdminLayout({
 
           <Link
             to="/ar"
-            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/ar" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
+            className={`relative flex items-center px-3 py-2.5 rounded-2xl border transition-all whitespace-nowrap font-semibold ${location.pathname === "/ar" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_10px_24px_rgba(15,23,42,0.25)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
           >
             <Wallet className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -526,7 +532,7 @@ export default function AdminLayout({
 
           <Link
             to="/customers"
-            className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/customers" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
+            className={`relative flex items-center px-3 py-2.5 rounded-2xl border transition-all whitespace-nowrap font-semibold ${location.pathname === "/customers" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_10px_24px_rgba(15,23,42,0.25)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
           >
             <Users className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -538,7 +544,7 @@ export default function AdminLayout({
           {isSuperAdmin && (
             <Link
               to="/personnel"
-              className={`flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/personnel" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
+              className={`relative flex items-center px-3 py-2.5 rounded-2xl border transition-all whitespace-nowrap font-semibold ${location.pathname === "/personnel" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_10px_24px_rgba(15,23,42,0.25)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
             >
               <ShieldCheck className="w-5 h-5 flex-shrink-0" />
               <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -549,12 +555,12 @@ export default function AdminLayout({
         </nav>
 
         {/* Bottom Actions (Logs & Settings) */}
-        <div className="p-3 border-t border-blue-700 flex flex-col gap-1.5 bg-blue-600/40">
+        <div className="relative z-10 p-3 border-t border-white/15 flex flex-col gap-2 bg-black/10 backdrop-blur-sm">
           {/* ONLY SUPER ADMINS CAN SEE SYSTEM LOGS */}
           {isSuperAdmin && (
             <Link
               to="/logs"
-              className={`w-full flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/logs" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
+              className={`w-full relative flex items-center px-3 py-2.5 rounded-2xl border transition-all whitespace-nowrap font-semibold ${location.pathname === "/logs" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_10px_24px_rgba(15,23,42,0.25)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
             >
               <Activity className="w-5 h-5 flex-shrink-0" />
               <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -565,7 +571,7 @@ export default function AdminLayout({
 
           <Link
             to="/settings"
-            className={`w-full flex items-center px-3 py-2.5 rounded-lg transition-all whitespace-nowrap font-medium ${location.pathname === "/settings" ? "bg-blue-700/20 text-white" : "text-white hover:bg-blue-700/10"}`}
+            className={`w-full relative flex items-center px-3 py-2.5 rounded-2xl border transition-all whitespace-nowrap font-semibold ${location.pathname === "/settings" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_10px_24px_rgba(15,23,42,0.25)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
           >
             <Settings className="w-5 h-5 flex-shrink-0" />
             <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -583,13 +589,18 @@ export default function AdminLayout({
             onClick={() => setShowMobileMenu(false)}
           />
 
-          <aside className="absolute right-0 top-0 h-full w-[84vw] max-w-[320px] bg-blue-600 text-white shadow-2xl border-l border-blue-700 animate-in slide-in-from-right duration-200 flex flex-col">
-            <div className="h-16 flex items-center justify-between px-4 border-b border-blue-700">
+          <aside className="absolute right-0 top-0 h-full w-[84vw] max-w-[320px] bg-gradient-to-b from-blue-500 via-blue-600 to-blue-700 text-white shadow-2xl border-l border-blue-400/70 animate-in slide-in-from-right duration-200 flex flex-col overflow-hidden">
+            <div className="pointer-events-none absolute inset-0">
+              <div className="absolute -top-10 -left-6 h-32 w-32 rounded-full bg-cyan-200/25 blur-2xl" />
+              <div className="absolute top-1/2 -right-12 h-36 w-36 rounded-full bg-indigo-200/20 blur-3xl" />
+            </div>
+
+            <div className="relative z-10 h-16 flex items-center justify-between px-4 border-b border-white/15 bg-white/5">
               <div className="flex items-center gap-2 min-w-0">
                 <img
                   src={technician}
                   alt="Technician"
-                  className="w-8 h-8 object-cover flex-shrink-0"
+                  className="w-8 h-8 object-cover flex-shrink-0 drop-shadow-[0_6px_10px_rgba(15,23,42,0.45)]"
                 />
                 <span className="font-black text-lg tracking-tight truncate">
                   Help Desk
@@ -604,10 +615,10 @@ export default function AdminLayout({
               </button>
             </div>
 
-            <nav className="flex-1 py-5 px-3 overflow-y-auto space-y-1.5">
+            <nav className="relative z-10 flex-1 py-5 px-3 overflow-y-auto space-y-2">
               <Link
                 to="/"
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl border transition-all font-semibold ${location.pathname === "/" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_24px_rgba(15,23,42,0.24)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
               >
                 <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
                 Dashboard
@@ -615,7 +626,7 @@ export default function AdminLayout({
 
               <Link
                 to="/queue"
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/queue" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl border transition-all font-semibold ${location.pathname === "/queue" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_24px_rgba(15,23,42,0.24)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
               >
                 <Tickets className="w-5 h-5 flex-shrink-0" />
                 Tickets
@@ -623,7 +634,7 @@ export default function AdminLayout({
 
               <Link
                 to="/job-orders"
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/job-orders" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl border transition-all font-semibold ${location.pathname === "/job-orders" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_24px_rgba(15,23,42,0.24)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
               >
                 <ClipboardList className="w-5 h-5 flex-shrink-0" />
                 Job Orders
@@ -631,7 +642,7 @@ export default function AdminLayout({
 
               <Link
                 to="/quotations"
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/quotations" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl border transition-all font-semibold ${location.pathname === "/quotations" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_24px_rgba(15,23,42,0.24)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
               >
                 <img
                   src={quotationIcon}
@@ -643,7 +654,7 @@ export default function AdminLayout({
 
               <Link
                 to="/customers"
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/customers" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl border transition-all font-semibold ${location.pathname === "/customers" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_24px_rgba(15,23,42,0.24)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
               >
                 <Users className="w-5 h-5 flex-shrink-0" />
                 Customers
@@ -652,7 +663,7 @@ export default function AdminLayout({
               {isSuperAdmin && (
                 <Link
                   to="/personnel"
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/personnel" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl border transition-all font-semibold ${location.pathname === "/personnel" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_24px_rgba(15,23,42,0.24)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
                 >
                   <ShieldCheck className="w-5 h-5 flex-shrink-0" />
                   Personnel
@@ -662,7 +673,7 @@ export default function AdminLayout({
               {isSuperAdmin && (
                 <Link
                   to="/logs"
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/logs" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl border transition-all font-semibold ${location.pathname === "/logs" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_24px_rgba(15,23,42,0.24)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
                 >
                   <Activity className="w-5 h-5 flex-shrink-0" />
                   System Logs
@@ -671,14 +682,14 @@ export default function AdminLayout({
 
               <Link
                 to="/settings"
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-medium ${location.pathname === "/settings" ? "bg-blue-700/30 text-white" : "text-white hover:bg-blue-700/20"}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl border transition-all font-semibold ${location.pathname === "/settings" ? "bg-white/18 text-white border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_24px_rgba(15,23,42,0.24)]" : "text-blue-50 border-transparent hover:bg-white/12 hover:border-white/20 hover:text-white"}`}
               >
                 <Settings className="w-5 h-5 flex-shrink-0" />
                 Settings
               </Link>
             </nav>
 
-            <div className="border-t border-blue-700 px-4 py-4 bg-blue-600/50">
+            <div className="relative z-10 border-t border-white/15 px-4 py-4 bg-black/10 backdrop-blur-sm">
               <div className="flex items-center gap-3">
                 {userProfile?.avatar_url ? (
                   <img

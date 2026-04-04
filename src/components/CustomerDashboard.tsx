@@ -83,81 +83,29 @@ type RealtimeJobOrderRow = {
 };
 
 const COMPLETED_STATUSES = ["Ready for Pickup", "Ready", "Released"];
+const CUSTOMER_LIVE_STATUS_LABELS: Record<string, string> = {
+  Received: "Received",
+  Diagnosing: "Diagnosing",
+  "In Repair": "In Repair",
+  "In Progress": "In Repair",
+  "Waiting on Parts": "In Repair",
+  Ready: "Ready",
+  "Ready for Pickup": "Ready",
+};
 
-const formatPeso = (value?: number | null) =>
-  `P${Number(value || 0).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-  })}`;
-
-const buildUpdateMessages = (
+const buildStatusUpdateMessage = (
   oldRow: RealtimeJobOrderRow,
   newRow: RealtimeJobOrderRow,
 ) => {
+  if (oldRow.status === newRow.status) return null;
+
   const ticketNo = newRow.job_order_no ?? newRow.id ?? "--";
-  const messages: string[] = [];
+  const statusLabel = newRow.status
+    ? CUSTOMER_LIVE_STATUS_LABELS[newRow.status]
+    : undefined;
 
-  if (oldRow.status !== newRow.status && newRow.status) {
-    messages.push(`Ticket #${ticketNo} status updated to: ${newRow.status}`);
-  }
-
-  if (oldRow.assigned_tech !== newRow.assigned_tech) {
-    messages.push(
-      `Ticket #${ticketNo} technician updated: ${newRow.assigned_tech || "Unassigned"}`,
-    );
-  }
-
-  if (oldRow.priority !== newRow.priority && newRow.priority) {
-    messages.push(`Ticket #${ticketNo} priority set to: ${newRow.priority}`);
-  }
-
-  if (
-    oldRow.quotation_status !== newRow.quotation_status &&
-    newRow.quotation_status
-  ) {
-    messages.push(
-      `Ticket #${ticketNo} quotation status: ${newRow.quotation_status}`,
-    );
-  }
-
-  if (oldRow.quotation_amount !== newRow.quotation_amount) {
-    messages.push(
-      `Ticket #${ticketNo} quotation amount updated: ${formatPeso(newRow.quotation_amount)}`,
-    );
-  }
-
-  if (oldRow.has_purchase_order !== newRow.has_purchase_order) {
-    messages.push(
-      `Ticket #${ticketNo} purchase order ${newRow.has_purchase_order ? "confirmed" : "updated"}`,
-    );
-  }
-
-  if (
-    oldRow.payment_status !== newRow.payment_status &&
-    newRow.payment_status
-  ) {
-    messages.push(
-      `Ticket #${ticketNo} payment status: ${newRow.payment_status}`,
-    );
-  }
-
-  if (oldRow.amount_paid !== newRow.amount_paid) {
-    messages.push(
-      `Ticket #${ticketNo} payment recorded: ${formatPeso(newRow.amount_paid)}`,
-    );
-  }
-
-  if (
-    oldRow.resolution_notes !== newRow.resolution_notes &&
-    (newRow.resolution_notes || "").trim().length > 0
-  ) {
-    messages.push(`Ticket #${ticketNo} has a new technician resolution note.`);
-  }
-
-  if (messages.length === 0) {
-    messages.push(`Ticket #${ticketNo} was updated by admin.`);
-  }
-
-  return messages;
+  if (!statusLabel) return null;
+  return `Ticket #${ticketNo} status updated to: ${statusLabel}`;
 };
 
 const isCompletedTicket = (status: string) =>
@@ -261,6 +209,24 @@ export default function CustomerDashboard() {
   );
   const customerId = customerProfile.id;
   const quotationNoticeStorageKey = `central_juan_notified_quotations_${customerId || "default"}`;
+  const statusSnapshotStorageKey = `central_juan_status_snapshot_${customerId || "default"}`;
+
+  const appendNotifications = useCallback(
+    (items: string[]) => {
+      if (items.length === 0) return;
+
+      setNotifications((prev) => {
+        const merged = [...items, ...prev];
+        const deduped = Array.from(new Set(merged));
+        return deduped.slice(0, 50);
+      });
+
+      setNewNotificationPulse(true);
+      playNotificationSound();
+      setTimeout(() => setNewNotificationPulse(false), 1600);
+    },
+    [playNotificationSound],
+  );
 
   const fetchMyTickets = useCallback(
     async (silent = false) => {
@@ -361,16 +327,8 @@ export default function CustomerDashboard() {
     if (!customerId) return;
     fetchMyTickets();
 
-    const pushNotifications = (items: string[]) => {
-      if (items.length === 0) return;
-      setNotifications((prev) => [...items, ...prev].slice(0, 50));
-      setNewNotificationPulse(true);
-      playNotificationSound();
-      setTimeout(() => setNewNotificationPulse(false), 1600);
-    };
-
     const channel = supabase
-      .channel("customer_updates")
+      .channel(`customer_updates_${customerId}`)
       .on(
         "postgres_changes",
         {
@@ -382,7 +340,7 @@ export default function CustomerDashboard() {
         (payload) => {
           const inserted = payload.new as RealtimeJobOrderRow;
           const ticketNo = inserted.job_order_no ?? inserted.id ?? "--";
-          pushNotifications([
+          appendNotifications([
             `Ticket #${ticketNo} has been created and is now being processed.`,
           ]);
           fetchMyTickets(true);
@@ -399,7 +357,10 @@ export default function CustomerDashboard() {
         (payload) => {
           const oldRow = payload.old as RealtimeJobOrderRow;
           const newRow = payload.new as RealtimeJobOrderRow;
-          pushNotifications(buildUpdateMessages(oldRow, newRow));
+          const statusMessage = buildStatusUpdateMessage(oldRow, newRow);
+          if (statusMessage) {
+            appendNotifications([statusMessage]);
+          }
           fetchMyTickets(true);
         },
       )
@@ -408,7 +369,55 @@ export default function CustomerDashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [customerId, fetchMyTickets, playNotificationSound]);
+  }, [appendNotifications, customerId, fetchMyTickets]);
+
+  useEffect(() => {
+    if (!customerId || tickets.length === 0) return;
+
+    let previousSnapshot: Record<string, string> = {};
+    let hasExistingSnapshot = false;
+
+    try {
+      const raw = localStorage.getItem(statusSnapshotStorageKey);
+      if (raw) {
+        previousSnapshot = JSON.parse(raw) as Record<string, string>;
+        hasExistingSnapshot = true;
+      }
+    } catch {
+      previousSnapshot = {};
+      hasExistingSnapshot = false;
+    }
+
+    const nextSnapshot: Record<string, string> = {};
+    const newStatusMessages: string[] = [];
+
+    tickets.forEach((ticket) => {
+      const ticketNo = String(ticket.job_order_no ?? ticket.id ?? "").trim();
+      if (!ticketNo) return;
+
+      const normalizedStatus = CUSTOMER_LIVE_STATUS_LABELS[ticket.status];
+      if (!normalizedStatus) return;
+
+      nextSnapshot[ticketNo] = normalizedStatus;
+
+      if (!hasExistingSnapshot) return;
+      if (!previousSnapshot[ticketNo]) return;
+      if (previousSnapshot[ticketNo] === normalizedStatus) return;
+
+      newStatusMessages.push(
+        `Ticket #${ticketNo} status updated to: ${normalizedStatus}`,
+      );
+    });
+
+    localStorage.setItem(
+      statusSnapshotStorageKey,
+      JSON.stringify(nextSnapshot),
+    );
+
+    if (newStatusMessages.length > 0) {
+      appendNotifications(newStatusMessages);
+    }
+  }, [appendNotifications, customerId, statusSnapshotStorageKey, tickets]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -668,17 +677,12 @@ export default function CustomerDashboard() {
       JSON.stringify(Array.from(quotationNotifiedRef.current)),
     );
 
-    setNotifications((prev) => [...newMessages, ...prev].slice(0, 50));
-    setNewNotificationPulse(true);
-    playNotificationSound();
-    const timer = window.setTimeout(() => setNewNotificationPulse(false), 1600);
-
-    return () => window.clearTimeout(timer);
+    appendNotifications(newMessages);
   }, [
+    appendNotifications,
     customerId,
     pendingQuotations,
     quotationNoticeStorageKey,
-    playNotificationSound,
   ]);
 
   useEffect(() => {
