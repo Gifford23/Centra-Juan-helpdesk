@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Mail,
@@ -16,6 +16,10 @@ import background from "../assets/background.png";
 import { supabase } from "../lib/supabase"; // Import Supabase connection
 import { logSystemAction } from "../utils/auditLog";
 
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+const STORAGE_KEY = "central_juan_admin_security";
+
 export default function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -24,6 +28,12 @@ export default function AdminLogin() {
   const [showLoginSuccessModal, setShowLoginSuccessModal] = useState(false);
   const [loggedInUserName, setLoggedInUserName] = useState("");
   const [error, setError] = useState("");
+
+  // Security States
+  const [attempts, setAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState<string>("");
+
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -35,6 +45,45 @@ export default function AdminLogin() {
   const [showResetSuccessModal, setShowResetSuccessModal] = useState(false);
 
   const navigate = useNavigate();
+
+  // Load Security State on Mount
+  useEffect(() => {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (parsed.lockoutUntil && parsed.lockoutUntil > Date.now()) {
+        setLockoutUntil(parsed.lockoutUntil);
+      } else if (parsed.lockoutUntil && parsed.lockoutUntil <= Date.now()) {
+        localStorage.removeItem(STORAGE_KEY); // Lockout expired
+      } else {
+        setAttempts(parsed.attempts || 0);
+      }
+    }
+  }, []);
+
+  // Countdown Timer logic
+  useEffect(() => {
+    if (!lockoutUntil) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const diff = lockoutUntil - now;
+      if (diff <= 0) {
+        setLockoutUntil(null);
+        setAttempts(0);
+        localStorage.removeItem(STORAGE_KEY);
+        setTimeRemaining("");
+        setError(""); // Clear error when unlocked
+        clearInterval(interval);
+      } else {
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        setTimeRemaining(`${minutes}m ${seconds}s`);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [lockoutUntil]);
 
   const handleOpenForgotPassword = () => {
     setForgotEmail(email);
@@ -111,6 +160,8 @@ export default function AdminLogin() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (lockoutUntil) return; // Prevent submission if locked out
+
     setIsLoading(true);
     setError("");
 
@@ -125,27 +176,21 @@ export default function AdminLogin() {
 
       // 2. Handle Invalid Credentials
       if (fetchError || !data) {
-        await logSystemAction({
-          userName: email || "Unknown User",
-          action: "Failed login attempt",
-          details: `Login failed for email: ${email}`,
-        });
         throw new Error("Invalid email or password.");
       }
 
       // 3. Handle Deactivated Accounts
       if (data.status !== "Active") {
-        await logSystemAction({
-          userName: data.full_name || email || "Unknown User",
-          action: "Blocked login attempt",
-          details: "Attempted login with deactivated account.",
-        });
         throw new Error(
           "This account has been deactivated. Contact an administrator.",
         );
       }
 
-      // 4. Success! Save user data locally so the Dashboard knows who is logged in
+      // 4. Success! Clear security blocks
+      localStorage.removeItem(STORAGE_KEY);
+      setAttempts(0);
+
+      // Save user data locally so the Dashboard knows who is logged in
       localStorage.setItem(
         "central_juan_user_session_started_at",
         new Date().toISOString(),
@@ -163,9 +208,38 @@ export default function AdminLogin() {
       setPassword("");
     } catch (err: unknown) {
       console.error("Login Error:", err);
-      setError(
-        err instanceof Error ? err.message : "An error occurred during login.",
-      );
+
+      // Handle Failed Attempt Security
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+
+      if (newAttempts >= MAX_ATTEMPTS) {
+        const unlockTime = Date.now() + LOCKOUT_DURATION;
+        setLockoutUntil(unlockTime);
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ attempts: newAttempts, lockoutUntil: unlockTime }),
+        );
+        setError(
+          "Too many failed attempts. Your account is temporarily locked.",
+        );
+      } else {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ attempts: newAttempts, lockoutUntil: null }),
+        );
+        setError(
+          err instanceof Error
+            ? `${err.message} (${MAX_ATTEMPTS - newAttempts} attempts remaining)`
+            : `Login failed. (${MAX_ATTEMPTS - newAttempts} attempts remaining)`,
+        );
+      }
+
+      await logSystemAction({
+        userName: email || "Unknown User",
+        action: "Failed login attempt",
+        details: `Login failed for email: ${email}. Attempt ${newAttempts}/${MAX_ATTEMPTS}`,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -201,9 +275,38 @@ export default function AdminLogin() {
 
       <div className="relative z-10 mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white/90 backdrop-blur-xl py-8 px-4 shadow-2xl shadow-blue-900/20 rounded-2xl sm:rounded-[24px] sm:px-10 border border-white">
-          <form className="space-y-6" onSubmit={handleLogin}>
+          {/* Security Lockout Banner */}
+          {lockoutUntil && (
+            <div className="mb-6 bg-[#fdeaea] border border-[#e8c9c9] text-[#7a2323] p-3 sm:p-4 rounded-md animate-in fade-in zoom-in-95">
+              <div className="flex items-start gap-2.5 sm:gap-3">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#de4b4b] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <X className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white stroke-[3]" />
+                </div>
+                <p className="text-sm sm:text-[15px] leading-5 sm:leading-6 font-medium">
+                  <span className="font-extrabold">
+                    Your account has been locked
+                  </span>{" "}
+                  because you have reached the maximum number of invalid sign-in
+                  attempts. You can contact the administrator or{" "}
+                  <button
+                    type="button"
+                    onClick={handleOpenForgotPassword}
+                    className="underline underline-offset-2 font-semibold hover:text-[#5f1b1b] transition-colors align-baseline"
+                  >
+                    click here
+                  </button>{" "}
+                  to reset your password. Try again in {timeRemaining}.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <form
+            className={`space-y-6 ${lockoutUntil ? "opacity-50 pointer-events-none" : ""}`}
+            onSubmit={handleLogin}
+          >
             {/* Error Message Display */}
-            {error && (
+            {error && !lockoutUntil && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2 animate-in fade-in">
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
                 {error}
@@ -222,6 +325,7 @@ export default function AdminLogin() {
                 <input
                   type="email"
                   required
+                  disabled={!!lockoutUntil}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-sm font-medium shadow-sm"
@@ -238,6 +342,7 @@ export default function AdminLogin() {
                 </label>
                 <button
                   type="button"
+                  disabled={!!lockoutUntil}
                   onClick={handleOpenForgotPassword}
                   className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors"
                 >
@@ -251,6 +356,7 @@ export default function AdminLogin() {
                 <input
                   type={showPassword ? "text" : "password"}
                   required
+                  disabled={!!lockoutUntil}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-11 pr-11 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-sm font-medium shadow-sm"
@@ -258,6 +364,7 @@ export default function AdminLogin() {
                 />
                 <button
                   type="button"
+                  disabled={!!lockoutUntil}
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-blue-600 transition-colors"
                 >
@@ -288,7 +395,7 @@ export default function AdminLogin() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !!lockoutUntil}
               className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-md shadow-blue-600/20 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {isLoading ? (

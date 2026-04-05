@@ -1,19 +1,69 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Phone, Loader2, AlertCircle, ArrowRight } from "lucide-react";
+import { Mail, Phone, Loader2, AlertCircle, ArrowRight, X } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import background from "../assets/background.png";
 import technician from "../assets/technician.png";
+
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_DURATION = 15 * 60 * 1000;
+const CUSTOMER_SECURITY_KEY = "central_juan_customer_security";
 
 export default function CustomerLogin() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [attempts, setAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const data = localStorage.getItem(CUSTOMER_SECURITY_KEY);
+    if (!data) return;
+
+    const parsed = JSON.parse(data);
+    if (parsed.lockoutUntil && parsed.lockoutUntil > Date.now()) {
+      setLockoutUntil(parsed.lockoutUntil);
+      return;
+    }
+
+    if (parsed.lockoutUntil && parsed.lockoutUntil <= Date.now()) {
+      localStorage.removeItem(CUSTOMER_SECURITY_KEY);
+      return;
+    }
+
+    setAttempts(parsed.attempts || 0);
+  }, []);
+
+  useEffect(() => {
+    if (!lockoutUntil) return;
+
+    const interval = setInterval(() => {
+      const diff = lockoutUntil - Date.now();
+      if (diff <= 0) {
+        setLockoutUntil(null);
+        setAttempts(0);
+        setTimeRemaining("");
+        setError("");
+        localStorage.removeItem(CUSTOMER_SECURITY_KEY);
+        clearInterval(interval);
+        return;
+      }
+
+      const minutes = Math.floor(diff / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      setTimeRemaining(`${minutes}m ${seconds}s`);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [lockoutUntil]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (lockoutUntil) return;
+
     setIsLoading(true);
     setError("");
 
@@ -32,6 +82,9 @@ export default function CustomerLogin() {
         );
       }
 
+      localStorage.removeItem(CUSTOMER_SECURITY_KEY);
+      setAttempts(0);
+
       // Save customer session
       localStorage.setItem(
         "central_juan_customer_session_started_at",
@@ -40,9 +93,30 @@ export default function CustomerLogin() {
       localStorage.setItem("central_juan_customer", JSON.stringify(data));
       navigate("/my-portal");
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Invalid login credentials.",
-      );
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+
+      if (newAttempts >= MAX_ATTEMPTS) {
+        const unlockTime = Date.now() + LOCKOUT_DURATION;
+        setLockoutUntil(unlockTime);
+        localStorage.setItem(
+          CUSTOMER_SECURITY_KEY,
+          JSON.stringify({ attempts: newAttempts, lockoutUntil: unlockTime }),
+        );
+        setError(
+          "Too many failed attempts. Your account is temporarily locked.",
+        );
+      } else {
+        localStorage.setItem(
+          CUSTOMER_SECURITY_KEY,
+          JSON.stringify({ attempts: newAttempts, lockoutUntil: null }),
+        );
+        setError(
+          err instanceof Error
+            ? `${err.message} (${MAX_ATTEMPTS - newAttempts} attempts remaining)`
+            : `Invalid login credentials. (${MAX_ATTEMPTS - newAttempts} attempts remaining)`,
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -76,13 +150,33 @@ export default function CustomerLogin() {
           </p>
         </div>
 
-        {error && (
+        {lockoutUntil && (
+          <div className="mb-6 bg-[#fdeaea] border border-[#e8c9c9] text-[#7a2323] p-3 sm:p-4 rounded-md animate-in fade-in zoom-in-95">
+            <div className="flex items-start gap-2.5 sm:gap-3">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#de4b4b] flex items-center justify-center flex-shrink-0 mt-0.5">
+                <X className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white stroke-[3]" />
+              </div>
+              <p className="text-sm sm:text-[15px] leading-5 sm:leading-6 font-medium">
+                <span className="font-extrabold">
+                  Your account has been locked
+                </span>{" "}
+                because you have reached the maximum number of invalid sign-in
+                attempts. Please try again in {timeRemaining}.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {error && !lockoutUntil && (
           <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm font-bold flex items-center gap-2">
             <AlertCircle className="w-5 h-5 flex-shrink-0" /> {error}
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form
+          onSubmit={handleLogin}
+          className={`space-y-5 ${lockoutUntil ? "opacity-50 pointer-events-none" : ""}`}
+        >
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1.5">
               Email Address
@@ -92,6 +186,7 @@ export default function CustomerLogin() {
               <input
                 type="email"
                 required
+                disabled={!!lockoutUntil}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium"
@@ -109,6 +204,7 @@ export default function CustomerLogin() {
               <input
                 type="tel"
                 required
+                disabled={!!lockoutUntil}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium"
@@ -119,7 +215,7 @@ export default function CustomerLogin() {
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || !!lockoutUntil}
             className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-600/20 disabled:opacity-70 flex justify-center items-center gap-2 mt-4"
           >
             {isLoading ? (
