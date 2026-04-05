@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import Chatbot from "./Chatbot";
 import { Turnstile } from "@marsidev/react-turnstile";
@@ -24,13 +24,43 @@ import background from "../assets/background.png";
 import technician from "../assets/technician.png";
 import { logSystemAction } from "../utils/auditLog";
 
+type SubmitTicketDraft = {
+  customerName?: string;
+  phoneNumber?: string;
+  email?: string;
+  address?: string;
+  deviceType?: string;
+  issueCategory?: string;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
+  complaint?: string;
+  visualChecks?: string;
+  acceptedTerms?: boolean;
+};
+
+const DRAFT_STORAGE_KEY = "submit-ticket-draft-v1";
+
 export default function SubmitTicket() {
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const uploadProgressIntervalRef = useRef<ReturnType<
+    typeof setInterval
+  > | null>(null);
+  const uploadProgressResetTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+
   const [isAllowed, setIsAllowed] = useState<boolean | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successTrackingId, setSuccessTrackingId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [showCopySuccessModal, setShowCopySuccessModal] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [draft, setDraft] = useState<SubmitTicketDraft>({});
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Image Upload State
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -38,6 +68,34 @@ export default function SubmitTicket() {
 
   // Cloudflare Turnstile State
   const [turnstileToken, setTurnstileToken] = useState<string>("");
+
+  useEffect(() => {
+    try {
+      const rawDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (rawDraft) {
+        const parsed = JSON.parse(rawDraft) as SubmitTicketDraft;
+        setDraft(parsed || {});
+      }
+    } catch (error) {
+      console.error("Failed to load ticket draft:", error);
+    } finally {
+      setDraftLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+      }
+      if (uploadProgressIntervalRef.current) {
+        clearInterval(uploadProgressIntervalRef.current);
+      }
+      if (uploadProgressResetTimeoutRef.current) {
+        clearTimeout(uploadProgressResetTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // 1. Check if the admin has enabled Public Tickets
   useEffect(() => {
@@ -77,6 +135,80 @@ export default function SubmitTicket() {
     }
   };
 
+  const persistDraftFromForm = () => {
+    if (!formRef.current) return;
+
+    const currentFormData = new FormData(formRef.current);
+    const nextDraft: SubmitTicketDraft = {
+      customerName: String(currentFormData.get("customerName") || "").trim(),
+      phoneNumber: String(currentFormData.get("phoneNumber") || "").trim(),
+      email: String(currentFormData.get("email") || "").trim(),
+      address: String(currentFormData.get("address") || "").trim(),
+      deviceType: String(currentFormData.get("deviceType") || "").trim(),
+      issueCategory: String(currentFormData.get("issueCategory") || "").trim(),
+      brand: String(currentFormData.get("brand") || "").trim(),
+      model: String(currentFormData.get("model") || "").trim(),
+      serialNumber: String(currentFormData.get("serialNumber") || "").trim(),
+      complaint: String(currentFormData.get("complaint") || "").trim(),
+      visualChecks: String(currentFormData.get("visualChecks") || "").trim(),
+      acceptedTerms: currentFormData.get("acceptedTerms") === "yes",
+    };
+
+    try {
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(nextDraft));
+    } catch (error) {
+      console.error("Failed to save ticket draft:", error);
+    }
+  };
+
+  const handleAutoSaveDraft = () => {
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+    }
+
+    autosaveTimeoutRef.current = setTimeout(() => {
+      persistDraftFromForm();
+    }, 300);
+  };
+
+  const startImageUploadProgress = () => {
+    if (uploadProgressIntervalRef.current) {
+      clearInterval(uploadProgressIntervalRef.current);
+    }
+    if (uploadProgressResetTimeoutRef.current) {
+      clearTimeout(uploadProgressResetTimeoutRef.current);
+    }
+
+    setIsUploadingImage(true);
+    setUploadProgress(8);
+
+    uploadProgressIntervalRef.current = setInterval(() => {
+      setUploadProgress((prev) => {
+        if (prev >= 90) return prev;
+        return prev + Math.max(1, Math.round((90 - prev) / 6));
+      });
+    }, 180);
+  };
+
+  const finishImageUploadProgress = (isSuccess: boolean) => {
+    if (uploadProgressIntervalRef.current) {
+      clearInterval(uploadProgressIntervalRef.current);
+      uploadProgressIntervalRef.current = null;
+    }
+
+    if (!isSuccess) {
+      setIsUploadingImage(false);
+      setUploadProgress(0);
+      return;
+    }
+
+    setUploadProgress(100);
+    uploadProgressResetTimeoutRef.current = setTimeout(() => {
+      setIsUploadingImage(false);
+      setUploadProgress(0);
+    }, 450);
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -110,19 +242,25 @@ export default function SubmitTicket() {
       if (imageFile) {
         const fileExt = imageFile.name.split(".").pop();
         const fileName = `${newTrackingId}-${Date.now()}.${fileExt}`;
+        let uploadSucceeded = false;
+        startImageUploadProgress();
+        try {
+          const { error: uploadError } = await supabase.storage
+            .from("job_images")
+            .upload(fileName, imageFile);
 
-        const { error: uploadError } = await supabase.storage
-          .from("job_images")
-          .upload(fileName, imageFile);
+          if (uploadError) throw uploadError;
 
-        if (uploadError) throw uploadError;
+          // Get the public URL for the uploaded image
+          const { data: publicUrlData } = supabase.storage
+            .from("job_images")
+            .getPublicUrl(fileName);
 
-        // Get the public URL for the uploaded image
-        const { data: publicUrlData } = supabase.storage
-          .from("job_images")
-          .getPublicUrl(fileName);
-
-        imageUrl = publicUrlData.publicUrl;
+          imageUrl = publicUrlData.publicUrl;
+          uploadSucceeded = true;
+        } finally {
+          finishImageUploadProgress(uploadSucceeded);
+        }
       }
 
       // 2. Insert the Customer Profile
@@ -174,6 +312,13 @@ export default function SubmitTicket() {
       } catch (auditError) {
         console.warn("Audit logging failed after ticket creation:", auditError);
       }
+
+      try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+      } catch (error) {
+        console.error("Failed to clear ticket draft after submit:", error);
+      }
+      setDraft({});
 
       // Show Success Screen
       setSuccessTrackingId(newTrackingId);
@@ -371,9 +516,19 @@ export default function SubmitTicket() {
                 </div>
               )}
             </div>
+          ) : !draftLoaded ? (
+            <div className="p-12 flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+            </div>
           ) : (
             /* SUBMISSION FORM */
-            <form onSubmit={handleSubmit} className="p-6 md:p-10 space-y-8">
+            <form
+              ref={formRef}
+              onSubmit={handleSubmit}
+              onInput={handleAutoSaveDraft}
+              onChange={handleAutoSaveDraft}
+              className="p-6 md:p-10 space-y-8"
+            >
               {errorMessage && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2">
                   <AlertCircle className="w-5 h-5 flex-shrink-0" />{" "}
@@ -392,6 +547,7 @@ export default function SubmitTicket() {
                     <input
                       type="text"
                       name="customerName"
+                      defaultValue={draft.customerName || ""}
                       required
                       placeholder="Full Name *"
                       className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium"
@@ -402,6 +558,7 @@ export default function SubmitTicket() {
                     <input
                       type="tel"
                       name="phoneNumber"
+                      defaultValue={draft.phoneNumber || ""}
                       required
                       placeholder="Phone Number *"
                       className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium"
@@ -412,6 +569,7 @@ export default function SubmitTicket() {
                     <input
                       type="email"
                       name="email"
+                      defaultValue={draft.email || ""}
                       required
                       placeholder="Email Address *"
                       className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium"
@@ -422,6 +580,7 @@ export default function SubmitTicket() {
                     <input
                       type="text"
                       name="address"
+                      defaultValue={draft.address || ""}
                       required
                       placeholder="Complete Address *"
                       className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium"
@@ -439,6 +598,7 @@ export default function SubmitTicket() {
                   <div className="relative">
                     <select
                       name="deviceType"
+                      defaultValue={draft.deviceType || ""}
                       required
                       className="w-full pr-10 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium cursor-pointer appearance-none"
                     >
@@ -453,6 +613,7 @@ export default function SubmitTicket() {
                   <div className="relative">
                     <select
                       name="issueCategory"
+                      defaultValue={draft.issueCategory || ""}
                       required
                       className="w-full pr-10 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium cursor-pointer appearance-none"
                     >
@@ -469,6 +630,7 @@ export default function SubmitTicket() {
                   <input
                     type="text"
                     name="brand"
+                    defaultValue={draft.brand || ""}
                     required
                     placeholder="Brand (e.g., Acer, HP) *"
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium"
@@ -476,6 +638,7 @@ export default function SubmitTicket() {
                   <input
                     type="text"
                     name="model"
+                    defaultValue={draft.model || ""}
                     required
                     placeholder="Model *"
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium"
@@ -485,6 +648,7 @@ export default function SubmitTicket() {
                     <input
                       type="text"
                       name="serialNumber"
+                      defaultValue={draft.serialNumber || ""}
                       placeholder="Serial Number (If known)"
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium"
                     />
@@ -493,6 +657,7 @@ export default function SubmitTicket() {
                   <div className="md:col-span-2">
                     <textarea
                       name="complaint"
+                      defaultValue={draft.complaint || ""}
                       required
                       rows={3}
                       placeholder="Please describe the issue in detail..."
@@ -503,6 +668,7 @@ export default function SubmitTicket() {
                     <input
                       type="text"
                       name="visualChecks"
+                      defaultValue={draft.visualChecks || ""}
                       placeholder="Any visible physical damage? (Scratches, dents, etc.)"
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none transition-all text-sm font-medium"
                     />
@@ -555,6 +721,20 @@ export default function SubmitTicket() {
                       />
                     </>
                   )}
+
+                  {isUploadingImage && (
+                    <div className="mt-3 w-full max-w-xs">
+                      <div className="h-2 w-full bg-blue-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-600 rounded-full transition-all duration-200"
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                      </div>
+                      <p className="mt-1 text-[11px] text-blue-700 font-bold uppercase tracking-wider text-center">
+                        Uploading image... {uploadProgress}%
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -563,6 +743,9 @@ export default function SubmitTicket() {
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
+                    name="acceptedTerms"
+                    value="yes"
+                    defaultChecked={Boolean(draft.acceptedTerms)}
                     required
                     className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer flex-shrink-0"
                   />

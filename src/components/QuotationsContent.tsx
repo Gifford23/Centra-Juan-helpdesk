@@ -1,14 +1,7 @@
 import { useState, useEffect } from "react";
-import {
-  Search,
-  Loader2,
-  MessageSquare,
-  X,
-  Package,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { Search, Loader2, X, Package, Plus, Trash2 } from "lucide-react";
 import formIcon from "../assets/icons/form.png";
+import messageIcon from "../assets/icons/message.png";
 import { supabase } from "../lib/supabase";
 
 function PhilippinePeso({ className = "" }: { className?: string }) {
@@ -561,7 +554,12 @@ export default function QuotationsContent() {
               {selectedJob.customer_reply && (
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 shadow-sm">
                   <p className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                    <MessageSquare className="w-4 h-4" /> Customer Reply
+                    <img
+                      src={messageIcon}
+                      alt="Customer Reply"
+                      className="w-4 h-4 object-contain"
+                    />{" "}
+                    Customer Reply
                   </p>
                   <p className="text-sm text-blue-900 font-medium italic">
                     "{selectedJob.customer_reply}"
@@ -865,7 +863,7 @@ export default function QuotationsContent() {
                   value={quoteMessage}
                   onChange={(e) => setQuoteMessage(e.target.value)}
                   className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-600 outline-none resize-none transition-all"
-                  placeholder="Enter terms, lead times, or warranty details..."
+                  placeholder="Type your message here..."
                 />
               </div>
             </div>
