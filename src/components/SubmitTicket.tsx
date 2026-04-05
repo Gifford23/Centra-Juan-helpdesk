@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Chatbot from "./Chatbot";
+import { Turnstile } from "@marsidev/react-turnstile";
 import {
   Loader2,
   AlertCircle,
@@ -34,6 +35,9 @@ export default function SubmitTicket() {
   // Image Upload State
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // Cloudflare Turnstile State
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
 
   // 1. Check if the admin has enabled Public Tickets
   useEffect(() => {
@@ -75,6 +79,13 @@ export default function SubmitTicket() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Validate Turnstile
+    if (!turnstileToken) {
+      alert("Please complete the security check.");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage("");
 
@@ -560,17 +571,38 @@ export default function SubmitTicket() {
                     in the Central Juan system. A minimum diagnostic fee of PHP
                     150.00 applies once the device is dropped off and inspected.
                     I am responsible for backing up my data prior to drop-off.{" "}
-                    <Link to="/terms" target="_blank" className="text-blue-600 font-bold hover:underline">
+                    <Link
+                      to="/terms"
+                      target="_blank"
+                      className="text-blue-600 font-bold hover:underline"
+                    >
                       Read full Terms & Policies.
                     </Link>
                   </span>
                 </label>
               </div>
 
+              {/* Cloudflare Turnstile Widget */}
+              <div className="flex justify-center my-6">
+                <Turnstile
+                  siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                  onSuccess={(token) => {
+                    setTurnstileToken(token);
+                  }}
+                  onError={() => {
+                    setTurnstileToken("");
+                    alert("Security check failed. Please try again.");
+                  }}
+                  onExpire={() => {
+                    setTurnstileToken("");
+                  }}
+                />
+              </div>
+
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !turnstileToken}
                 className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-[0.98] disabled:opacity-70 flex justify-center items-center gap-2 text-lg"
               >
                 {isSubmitting ? (
