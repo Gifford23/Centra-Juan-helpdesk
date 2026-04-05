@@ -17,7 +17,7 @@ import { supabase } from "../lib/supabase"; // Import Supabase connection
 import { logSystemAction } from "../utils/auditLog";
 
 const MAX_ATTEMPTS = 5;
-const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 const STORAGE_KEY = "central_juan_admin_security";
 
 export default function AdminLogin() {

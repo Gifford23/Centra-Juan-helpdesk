@@ -6,7 +6,7 @@ import background from "../assets/background.png";
 import technician from "../assets/technician.png";
 
 const MAX_ATTEMPTS = 5;
-const LOCKOUT_DURATION = 15 * 60 * 1000;
+const LOCKOUT_DURATION = 5 * 60 * 1000;
 const CUSTOMER_SECURITY_KEY = "central_juan_customer_security";
 
 export default function CustomerLogin() {
